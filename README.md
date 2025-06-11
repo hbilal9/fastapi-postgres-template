@@ -37,16 +37,6 @@ This is a template project for a FastAPI application with a PostgreSQL database,
     ```
     **Note**: For the Docker setup, database connection details (`DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, etc.) are primarily sourced from the `environment` section of the `fastapi` and `db` services in the `docker-compose.yml` file. The `DATABASE_URL` in `.env` might be used if your application reads it directly for other purposes or for local non-Docker development.
 
-2.  **(Optional) Hosts File Configuration for Traefik:**
-    To use the friendly URLs provided by Traefik (e.g., `http://api.localhost`, `http://pgadmin.localhost`), add the following lines to your system's hosts file:
-    *   On macOS/Linux: `/etc/hosts`
-    *   On Windows: `C:\Windows\System32\drivers\etc\hosts`
-
-    ```
-    127.0.0.1 api.localhost
-    127.0.0.1 pgadmin.localhost
-    ```
-
 ## Docker Build and Run
 
 To build and start all the services (FastAPI application, PostgreSQL database, pgAdmin, and Traefik):
