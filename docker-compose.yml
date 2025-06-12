@@ -32,7 +32,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_NAME}
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - ./misc/postgres-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - hbky
@@ -56,7 +56,7 @@ services:
       - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.localhost`)"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
     volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - ./misc/pgadmin-data:/var/lib/pgadmin
     networks:
       - hbky
     depends_on:
@@ -94,4 +94,12 @@ networks:
 
 volumes:
   postgres-data:
+    driver_opts:
+      o: bind
+      type: none
+      device: ./misc/postgres-data
   pgadmin-data:
+    driver_opts:
+      o: bind
+      type: none
+      device: ./misc/pgadmin-data
