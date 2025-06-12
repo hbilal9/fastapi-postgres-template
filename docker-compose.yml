@@ -33,7 +33,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB_NAME}
     volumes:
       - ./misc/postgres-data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./misc/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - hbky
     healthcheck:
@@ -62,31 +62,31 @@ services:
     depends_on:
       - db
 
-  fastapi:
-    image: fastapi-template
-    container_name: fastapi_container
-    build:
-      context: ./
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.fastapi.rule=Host(`api.localhost`)"
-      - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
-    env_file:
-      - .env
-    command: >
-      sh -c "sleep 10 && uv run alembic upgrade head &&
-            uv run python -m app.commands.create_admin &&
-            uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    networks:
-      - hbky
-    depends_on:
-      db:
-        condition: service_healthy
-      traefik:
-        condition: service_started
+  # fastapi:
+  #   image: fastapi-template
+  #   container_name: fastapi_container
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.fastapi.rule=Host(`api.localhost`)"
+  #     - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
+  #   env_file:
+  #     - .env
+  #   command: >
+  #     sh -c "sleep 10 && uv run alembic upgrade head &&
+  #           uv run python -m app.commands.create_admin &&
+  #           uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  #   networks:
+  #     - hbky
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     traefik:
+  #       condition: service_started
 
 networks:
   hbky:

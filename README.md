@@ -61,7 +61,7 @@ Once the containers are running:
 
 *   **pgAdmin (Database Management)**:
     *   Via Traefik: `http://pgadmin.localhost`
-    *   Directly: `http://localhost:5050`
+    *   Directly: `http://localhost:9000`
     *   **Login Credentials** (defined in `docker-compose.yml`):
         *   Email: `admin@admin.com`
         *   Password: `admin`
