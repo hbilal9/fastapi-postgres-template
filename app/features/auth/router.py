@@ -22,6 +22,23 @@ async def login(
     ):
     return login_service(db, form_data.username, form_data.password)
 
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+async def register(
+    request: Request,
+    db: DbSession,
+    user: UserCreate
+):
+    user = create_user_service(db, user)
+    if user:
+        return {
+            "message": "Account created successfully. You can now log in.",
+        }
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Failed to create user account",
+    )
+
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def get_user_profile(request: Request, user: CurrentUser):
