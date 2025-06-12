@@ -3,7 +3,7 @@ name = "sophie-sales-management-backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "alembic==1.16.1",
     "annotated-types==0.7.0",

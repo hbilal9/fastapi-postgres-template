@@ -28,9 +28,9 @@ services:
     image: postgres:17.0-alpine
     container_name: db_container
     environment:
-      - POSTGRES_USER=hbky
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=fastapi_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -46,8 +46,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: pgadmin_container
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
       - PGADMIN_CONFIG_SERVER_MODE=False
     ports:
       - "5050:80"
@@ -74,13 +74,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.fastapi.rule=Host(`api.localhost`)"
       - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
-    environment:
-      - DATABASE_URL=postgresql+psycopg2://hbky:password@db:5432/fastapi_db
-      - DATABASE_USER=hbky
-      - DATABASE_PASSWORD=password
-      - DATABASE_PORT=5432
-      - DATABASE_NAME=fastapi_db
-      - DATABASE_HOST=db
+    env_file:
+      - .env
     command: >
       sh -c "sleep 10 && uv run alembic upgrade head &&
             uv run python -m app.commands.create_admin &&
