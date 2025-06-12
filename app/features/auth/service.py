@@ -1,13 +1,11 @@
-from .graphql.types.user import UserCreateInput
-from app.models.user import User, UserRole
+from app.models.user import User
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from .schema import TokenResponse
+from .schema import TokenResponse, UserCreate
 from fastapi.security import OAuth2PasswordBearer
 from app.utils.security import hash_password, verify_password, create_access_token, verify_access_token
 from typing import Union
-from app.utils.permissions import ROLE_PERMISSIONS, has_permission, Permission
-from typing import Dict, Any, List, Optional
+from typing import Optional
 import uuid
 import hashlib
 from datetime import timedelta, datetime, timezone
@@ -36,7 +34,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Union[User, boo
         return False
     return user
 
-def create_user_service(db: Session, user_input: UserCreateInput):
+def create_user_service(db: Session, user_input: UserCreate) -> User:
     existing_user = db.query(User).filter(User.email == user_input.email).first()
     if existing_user:
         raise HTTPException(
@@ -49,7 +47,6 @@ def create_user_service(db: Session, user_input: UserCreateInput):
             }
         )
     
-    # Check password match here since we don't have Pydantic validation
     if user_input.password != user_input.confirm_password:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -65,17 +62,9 @@ def create_user_service(db: Session, user_input: UserCreateInput):
         "first_name": user_input.first_name,
         "last_name": user_input.last_name,
         "email": user_input.email,
-        "role": user_input.role,
         "is_active": user_input.is_active,
         "password_hash": hash_password(user_input.password)
     }
-    
-    role_mapping = {
-        "admin": UserRole.ADMIN,
-        "manager": UserRole.MANAGER,
-        "employee": UserRole.EMPLOYEE
-    }
-    user_data["role"] = role_mapping[user_data["role"]]
     
     db_user = User(**user_data)
     db.add(db_user)
@@ -119,81 +108,6 @@ def get_current_user(token: str, db: Session) -> User:
         )
     
     return user
-
-def update_user_service(
-    db: Session, 
-    current_user: User, 
-    user_id: uuid.UUID, 
-    update_data: Dict[str, Any]
-) -> User:
-    
-    user_to_update = db.query(User).filter(User.id == user_id).first()
-    if not user_to_update:
-        raise ValueError("User not found")
-    
-    is_self_update = current_user.id == user_id
-    can_update_others = has_permission(current_user, Permission.UPDATE_USER)  # Role-based check
-    
-    if not (is_self_update or can_update_others):
-        raise ValueError("Insufficient permissions: Cannot update this user")
-    
-    if 'email' in update_data and update_data['email']:
-        existing_user = db.query(User).filter(
-            User.email == update_data['email'],
-            User.id != user_id
-        ).first()
-        
-        if existing_user:
-            raise ValueError(f"Email '{update_data['email']}' is already in use")
-    
-    # Permission matrix: which roles can update which fields
-    field_permissions = {
-        'first_name': {'self': True, 'update_user_permission': True},
-        'last_name': {'self': True, 'update_user_permission': True},
-        'email': {'self': True, 'update_user_permission': True},
-        'role': {'self': False, 'update_user_permission': True},  # Only users with UPDATE_USER permission
-        'is_active': {'self': False, 'update_user_permission': True}  # Only users with UPDATE_USER permission
-    }
-    
-    for field, value in update_data.items():
-        if value is None:
-            continue
-            
-        field_perms = field_permissions.get(field, {'self': False, 'update_user_permission': False})
-        
-        can_update_field = (
-            (field_perms['self'] and is_self_update) or
-            (field_perms['update_user_permission'] and can_update_others)
-        )
-        
-        if not can_update_field:
-            raise ValueError(f"Insufficient permissions to update field: {field}")
-        
-        if field == 'role' and isinstance(value, str):
-            role_mapping = {
-                "admin": UserRole.ADMIN,
-                "manager": UserRole.MANAGER, 
-                "employee": UserRole.EMPLOYEE
-            }
-            user_to_update.role = role_mapping.get(value, user_to_update.role)
-        elif hasattr(user_to_update, field):
-            setattr(user_to_update, field, value)
-    
-    try:
-        db.commit()
-        db.refresh(user_to_update)
-        return user_to_update
-    except Exception as e:
-        db.rollback()
-        raise ValueError(f"Failed to update user: {str(e)}")
-    
-
-def get_user_permissions_service(current_user: User) -> List[str]:
-    if not current_user:
-        return []
-    
-    user_permissions = ROLE_PERMISSIONS.get(current_user.role, [])
-    return [permission.value for permission in user_permissions]
 
 def change_password_service(
     db: Session, 

@@ -7,7 +7,6 @@ class UserBase(BaseModel):
     first_name: str = Field(..., description="The user's first name")
     last_name: str = Field(..., description="The user's last name")
     email: EmailStr = Field(..., description="The user's email address")
-    role: Literal["admin", "manager", "employee"] = Field(..., description="The user's role")
     is_active: bool = Field(True, description="Indicates if the user is active")
 
 class UserCreate(UserBase):
@@ -36,18 +35,10 @@ class UserResponse(UserBase):
     first_name: str
     last_name: str
     email: EmailStr
-    role: str
     is_active: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-    @classmethod
-    def model_validate(cls, obj, **kwargs):
-        # Convert enum to string value if needed
-        if hasattr(obj, 'role') and hasattr(obj.role, 'value'):
-            obj.role = obj.role.value
-        return super().model_validate(obj, **kwargs)
     
 class TokenResponse(BaseModel):
     access_token: str

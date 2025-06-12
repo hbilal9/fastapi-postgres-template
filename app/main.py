@@ -10,9 +10,6 @@ from slowapi.errors import RateLimitExceeded
 
 from .utils.logging import configure_logging, LogLevels
 
-from strawberry.fastapi import GraphQLRouter
-from .graphql.schema import schema
-from .graphql.context import get_context
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -36,14 +33,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    graphql_app = GraphQLRouter(
-        schema,
-        context_getter=get_context,
-        graphiql=settings.DEBUG
-    )
-
-    app.include_router(graphql_app, prefix="/graphql")
  
     register_routes(app)
     return app
