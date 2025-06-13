@@ -2,11 +2,9 @@ __pycache__/
 *.py[cod]
 .DS_Store
 **/*.DS_Store
-misc/
-
+misc/postgres-data/
+misc/pgadmin-data/
 venv/
 .venv/
 .env
 letsencrypt/
-postgres-data/
-pgadmin-data/
