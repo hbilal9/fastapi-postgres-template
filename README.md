@@ -92,6 +92,61 @@ This is a template project for a FastAPI application with a PostgreSQL database,
    alembic upgrade head
    ```
 
+### Database Migrations Guide
+
+This project uses Alembic for managing database schema migrations. Understanding the migration workflow is essential for all developers working on this project.
+
+#### How Migrations Work
+
+1. **Migration Tracking:**
+   - Alembic maintains a version table (`alembic_version`) in your database
+   - This table stores the current revision ID that has been applied
+   - Each migration has a unique revision ID (e.g., `9ead825737b6`)
+
+2. **Creating New Migrations:**
+
+   When you modify SQLAlchemy models (e.g., add/change/remove columns), you need to create and apply migrations:
+
+   ```bash
+   # Generate a migration automatically by detecting model changes
+   alembic revision --autogenerate -m "describe_your_changes"
+   
+   # Review the generated migration file in app/alembic/versions/
+   # Make any necessary adjustments (e.g., adding default values for non-nullable columns)
+   
+   # Apply the migration
+   alembic upgrade head
+   ```
+
+3. **Common Migration Tasks:**
+
+   ```bash
+   # View current migration status
+   alembic current
+   
+   # View migration history
+   alembic history
+   
+   # Downgrade to a specific version
+   alembic downgrade <revision_id>
+   
+   # Downgrade one version
+   alembic downgrade -1
+   ```
+
+4. **Important Considerations:**
+
+   - **Adding Non-Nullable Columns:** When adding non-nullable columns to existing tables, you MUST provide a server_default value
+   - **JSONB Columns:** Require the PostgreSQL dialect to be properly imported and used
+   - **Data Migrations:** For complex data transformations, you may need to write custom Python in your migration scripts
+   - **Testing Migrations:** Always test migrations in a development environment before applying to production
+
+5. **Troubleshooting Migration Issues:**
+
+   - If a migration fails, check the error message carefully - common issues include constraint violations or missing dependencies
+   - If you need to reset a failed migration, you may need to modify the `alembic_version` table directly
+   - When working with existing data, consider data integrity and constraints
+
 4. **Run the application**:
 
    ```bash

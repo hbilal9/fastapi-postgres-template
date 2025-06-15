@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from app.utils.api import register_routes
 from app.utils.config import settings
 from fastapi.exceptions import RequestValidationError, HTTPException
@@ -7,6 +9,8 @@ from pydantic import ValidationError
 from app.utils.exception_handler import validation_exception_handler, pydantic_validation_exception_handler, http_exception_handler
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+import os
+from pathlib import Path
 
 from .utils.logging import configure_logging, LogLevels
 
@@ -34,7 +38,19 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
  
+    # API health check endpoint
+    @app.get("/api/health")
+    async def health_check():
+        return JSONResponse({"status": "ok", "message": "API is running"})
+    
+    # Register API routes
     register_routes(app)
+    
+    # Mount static frontend files if the directory exists
+    frontend_dir = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend"))
+    if frontend_dir.exists():
+        app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
+    
     return app
 
 app = create_app()

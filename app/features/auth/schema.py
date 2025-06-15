@@ -11,24 +11,6 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, description="The user's password")
-    confirm_password: str = Field(..., min_length=8, description="The user's password confirmation")
-  
-    @model_validator(mode='after')
-    def check_passwords_match(self):
-        if self.password != self.confirm_password:
-            raise ValidationError.from_exception_data(
-                title="Validation Error",
-                line_errors=[
-                    {
-                        'type': 'value_error',
-                        'loc': ('password',),
-                        'msg': 'passwords do not match',
-                        'input': {'password': self.password, 'confirm_password': self.confirm_password},
-                        'ctx': {'error': ValueError('passwords do not match')}
-                    }
-                ]
-            )
-        return self
     
 class UserResponse(UserBase):
     id: uuid.UUID
@@ -37,6 +19,7 @@ class UserResponse(UserBase):
     email: EmailStr
     is_active: bool
     created_at: datetime
+    user_data: Optional[dict] = None
 
     model_config = ConfigDict(from_attributes=True)
     

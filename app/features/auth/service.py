@@ -13,7 +13,6 @@ import uuid
 import hashlib
 from datetime import timedelta, datetime, timezone
 
-# Constants for error messages
 USER_NOT_FOUND_ERROR = "User not found"
 
 def get_user_by_id(db: Session, user_id: uuid.UUID) -> Optional[User]:
@@ -49,17 +48,6 @@ def create_user_service(db: Session, user_input: UserCreate) -> User:
                 "message": "invalid data",
                 "errors": {
                     "email": ["email already exists"]
-                }
-            }
-        )
-    
-    if user_input.password != user_input.confirm_password:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
-                "message": "invalid data",
-                "errors": {
-                    "password": ["passwords do not match"]
                 }
             }
         )

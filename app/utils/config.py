@@ -16,6 +16,9 @@ class Settings:
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
     )
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    
+    USER_VERIFICATION_CHECK: bool = os.getenv("USER_VERIFICATION_CHECK", "False").lower() == "true"
+    USER_VERIFICATION_EXPIRE_MINUTES: int = int(os.getenv("USER_VERIFICATION_EXPIRE_MINUTES", "7"))
 
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development").lower()
     

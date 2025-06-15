@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication - FastAPI + PostgreSQL Template</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0ea5e9",
+                        secondary: "#0284c7",
+                        dark: "#0c4a6e"
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const loginTab = document.getElementById('login-tab');
+            const registerTab = document.getElementById('register-tab');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const loginFormElement = document.getElementById('login-form-element');
+            const registerFormElement = document.getElementById('register-form-element');
+            const loginMessage = document.getElementById('login-message');
+            const registerMessage = document.getElementById('register-message');
+            const userProfile = document.getElementById('user-profile');
+            const protectedContent = document.getElementById('protected-content');
+            const logoutButton = document.getElementById('logout-button');
+            const fetchProfileButton = document.getElementById('fetch-profile-button');
+            const apiResponse = document.getElementById('api-response');
+
+            const API_URL = '/api';
+            const ENDPOINTS = {
+                login: `${API_URL}/auth/token`,
+                register: `${API_URL}/auth/register`,
+                me: `${API_URL}/auth/me`
+            };
+
+            checkAuthStatus();
+            loginTab.addEventListener('click', () => {
+                loginTab.classList.add('text-primary', 'border-primary');
+                loginTab.classList.remove('text-gray-500');
+                registerTab.classList.add('text-gray-500');
+                registerTab.classList.remove('text-primary', 'border-primary');
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+            });
+
+            registerTab.addEventListener('click', () => {
+                registerTab.classList.add('text-primary', 'border-primary');
+                registerTab.classList.remove('text-gray-500');
+                loginTab.classList.add('text-gray-500');
+                loginTab.classList.remove('text-primary', 'border-primary');
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            });
+
+            // Login form submission
+            loginFormElement.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                const rememberMe = document.getElementById('remember-me').checked;
+
+                try {
+                    showMessage(loginMessage, 'Logging in...', 'text-blue-500');
+
+                    // FastAPI OAuth2 expects username (not email) and password
+                    const response = await fetch(ENDPOINTS.login, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({
+                            username: email, // Send email as username
+                            password: password
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.detail || 'Login failed');
+                    }
+
+                    // Store token
+                    const token = data.access_token;
+                    storeAuthToken(token, rememberMe);
+
+                    showMessage(loginMessage, 'Login successful! Redirecting...', 'text-green-500');
+
+                    // Get user info and show profile
+                    await getUserProfile();
+
+                    setTimeout(() => {
+                        showAuthenticatedUI();
+                    }, 1000);
+
+                } catch (error) {
+                    showMessage(loginMessage, `Error: ${error.message}`, 'text-red-500');
+                }
+            });
+
+            // Register form submission
+            registerFormElement.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const firstName = document.getElementById('register-first-name').value;
+                const lastName = document.getElementById('register-last-name').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('register-confirm-password').value;
+
+                // Validate password matching (client-side only)
+                if (password !== confirmPassword) {
+                    showMessage(registerMessage, 'Passwords do not match', 'text-red-500');
+                    return;
+                }
+
+                try {
+                    showMessage(registerMessage, 'Registering...', 'text-blue-500');
+
+                    const response = await fetch(ENDPOINTS.register, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email,
+                            password,
+                            first_name: firstName,
+                            last_name: lastName
+                            // confirm_password removed from backend requirements
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.detail || 'Registration failed');
+                    }
+
+                    showMessage(registerMessage, 'Registration successful! Please login.', 'text-green-500');
+
+                    // Clear form and switch to login tab after 2 seconds
+                    setTimeout(() => {
+                        registerFormElement.reset();
+                        loginTab.click();
+                    }, 2000);
+
+                } catch (error) {
+                    showMessage(registerMessage, `Error: ${error.message}`, 'text-red-500');
+                }
+            });
+
+            // Logout button
+            if (logoutButton) {
+                logoutButton.addEventListener('click', () => {
+                    clearAuthToken();
+                    showUnauthenticatedUI();
+                    showMessage(loginMessage, 'Logged out successfully', 'text-green-500');
+                });
+            }
+
+            // Fetch profile button
+            if (fetchProfileButton) {
+                fetchProfileButton.addEventListener('click', async () => {
+                    try {
+                        const token = getAuthToken();
+                        if (!token) {
+                            throw new Error('Not authenticated');
+                        }
+
+                        const response = await fetch(ENDPOINTS.me, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.detail || 'Failed to fetch profile');
+                        }
+
+                        // Show API response
+                        apiResponse.textContent = JSON.stringify(data, null, 2);
+                        apiResponse.classList.remove('hidden');
+
+                    } catch (error) {
+                        apiResponse.textContent = `Error: ${error.message}`;
+                        apiResponse.classList.remove('hidden');
+                    }
+                });
+            }
+
+            // Helper Functions
+            function showMessage(element, message, className) {
+                if (!element) return;
+
+                element.textContent = message;
+                element.className = 'text-sm text-center mt-4 ' + className;
+                element.classList.remove('hidden');
+            }
+
+            function storeAuthToken(token, rememberMe = false) {
+                // Store token in appropriate storage based on remember me setting
+                const storage = rememberMe ? localStorage : sessionStorage;
+                storage.setItem('auth_token', token);
+            }
+
+            function getAuthToken() {
+                return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+            }
+
+            function clearAuthToken() {
+                localStorage.removeItem('auth_token');
+                sessionStorage.removeItem('auth_token');
+            }
+
+            function showAuthenticatedUI() {
+                document.getElementById('login-form').parentElement.classList.add('hidden');
+                userProfile.classList.remove('hidden');
+                protectedContent.classList.remove('hidden');
+            }
+
+            function showUnauthenticatedUI() {
+                document.getElementById('login-form').parentElement.classList.remove('hidden');
+                userProfile.classList.add('hidden');
+                protectedContent.classList.add('hidden');
+                apiResponse.classList.add('hidden');
+            }
+
+            async function checkAuthStatus() {
+                const token = getAuthToken();
+                if (token) {
+                    try {
+                        await getUserProfile();
+                        showAuthenticatedUI();
+                    } catch (error) {
+                        console.error('Auth token validation failed:', error);
+                        clearAuthToken();
+                    }
+                }
+            }
+
+            async function getUserProfile() {
+                const token = getAuthToken();
+                if (!token) {
+                    throw new Error('Not authenticated');
+                }
+
+                const response = await fetch(ENDPOINTS.me, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    clearAuthToken();
+                    throw new Error('Invalid authentication');
+                }
+
+                const userData = await response.json();
+                document.getElementById('user-name').textContent = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'User';
+                document.getElementById('user-email').textContent = userData.email || '';
+                document.getElementById('user-id').textContent = userData.id || '';
+                document.getElementById('profile-name').textContent = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'User';
+                document.getElementById('profile-email').textContent = userData.email || '';
+
+                return userData;
+            }
+        });
+    </script>
+    <script src="./js/auth.js" defer></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-primary shadow-lg">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="text-white font-bold text-xl">FastAPI Template</div>
+                <div class="space-x-4">
+                    <a href="/" class="text-white hover:text-gray-200">Home</a>
+                    <a href="/about.html" class="text-white hover:text-gray-200">About</a>
+                    <a href="/auth.html" class="text-white hover:text-gray-200 font-bold">Auth</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="bg-white shadow">
+        <div class="container mx-auto px-4 py-6">
+            <h1 class="text-3xl font-bold text-gray-900">Authentication</h1>
+            <p class="mt-2 text-gray-600">Login or Register to access protected features</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Auth Tabs -->
+            <div class="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
+                <div class="flex border-b">
+                    <button id="login-tab"
+                        class="flex-1 py-3 text-center font-semibold text-primary border-b-2 border-primary">Login</button>
+                    <button id="register-tab"
+                        class="flex-1 py-3 text-center font-semibold text-gray-500">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <div id="login-form" class="p-6">
+                    <form id="login-form-element" class="space-y-4">
+                        <div>
+                            <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="login-email" name="email" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="login-password" name="password" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="remember-me" name="remember-me"
+                                class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                            <label for="remember-me" class="ml-2 block text-sm text-gray-700">Remember me</label>
+                        </div>
+                        <div>
+                            <button type="submit"
+                                class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                                Sign in
+                            </button>
+                        </div>
+                        <div id="login-message" class="text-sm text-center hidden"></div>
+                    </form>
+                </div>
+
+                <!-- Register Form -->
+                <div id="register-form" class="p-6 hidden">
+                    <form id="register-form-element" class="space-y-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="register-first-name" class="block text-sm font-medium text-gray-700">First
+                                    name</label>
+                                <input type="text" id="register-first-name" name="first_name" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                            </div>
+                            <div>
+                                <label for="register-last-name" class="block text-sm font-medium text-gray-700">Last
+                                    name</label>
+                                <input type="text" id="register-last-name" name="last_name" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="register-email" class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="register-email" name="email" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label for="register-password"
+                                class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="register-password" name="password" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label for="register-confirm-password"
+                                class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                            <input type="password" id="register-confirm-password" name="confirm_password" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <button type="submit"
+                                class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                                Register
+                            </button>
+                        </div>
+                        <div id="register-message" class="text-sm text-center hidden"></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- User Profile (shown when logged in) -->
+            <div id="user-profile" class="bg-white rounded-lg shadow-md p-6 hidden">
+                <h2 class="text-2xl font-semibold mb-4">Welcome, <span id="user-name">User</span>!</h2>
+                <div class="mb-6">
+                    <p class="text-gray-600">You are logged in as <span id="user-email"
+                            class="font-medium">user@example.com</span></p>
+                </div>
+
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-lg font-semibold mb-2">Your Profile</h3>
+                    <div class="space-y-2">
+                        <div class="flex">
+                            <span class="w-24 font-medium">User ID:</span>
+                            <span id="user-id">12345</span>
+                        </div>
+                        <div class="flex">
+                            <span class="w-24 font-medium">Name:</span>
+                            <span id="profile-name">John Doe</span>
+                        </div>
+                        <div class="flex">
+                            <span class="w-24 font-medium">Email:</span>
+                            <span id="profile-email">john.doe@example.com</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <button id="logout-button"
+                        class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Protected Content Example -->
+            <div id="protected-content" class="mt-8 bg-white rounded-lg shadow-md p-6 hidden">
+                <h2 class="text-2xl font-semibold mb-4">Protected Content</h2>
+                <p class="text-gray-600 mb-4">This content is only visible to authenticated users.</p>
+
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <h3 class="text-lg font-semibold mb-2">User API Resources</h3>
+                    <ul class="list-disc ml-5 space-y-1">
+                        <li>GET /api/users/me - Get current user profile</li>
+                        <li>PUT /api/users/me - Update user profile</li>
+                        <li>DELETE /api/users/me - Delete account</li>
+                    </ul>
+                </div>
+
+                <div class="mt-4">
+                    <button id="fetch-profile-button"
+                        class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        Fetch My Profile
+                    </button>
+                </div>
+                <div id="api-response" class="mt-4 text-sm font-mono p-4 bg-gray-100 rounded-lg hidden"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <p>&copy; 2025 FastAPI + PostgreSQL Template</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="/" class="hover:text-gray-300">Home</a>
+                    <a href="/about.html" class="hover:text-gray-300">About</a>
+                    <a href="/auth.html" class="hover:text-gray-300">Auth</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

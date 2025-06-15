@@ -34,6 +34,8 @@ services:
     volumes:
       - ./misc/postgres-data:/var/lib/postgresql/data
       - ./misc/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
     networks:
       - hbky
     healthcheck:
