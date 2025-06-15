@@ -7,3 +7,5 @@ misc/pgadmin-data/
 venv/
 .venv/
 letsencrypt/
+.python-version
+.env

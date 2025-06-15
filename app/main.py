@@ -13,7 +13,7 @@ from .utils.logging import configure_logging, LogLevels
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="FASTAPI POSTGRES",
+        title="FASTAPI",
         description="FASTAPI POSTGRES TEMPLATE",
         version="1.0.0",
         debug=settings.DEBUG

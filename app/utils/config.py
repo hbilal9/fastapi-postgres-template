@@ -17,13 +17,12 @@ class Settings:
     )
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development").lower()
+    
     COOKIE_SECURE: bool = ENVIRONMENT in ["production", "staging"]
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = (
         "strict" if ENVIRONMENT == "production" else "lax"
     )
-
-    # Environment settings
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development").lower()
 
     # Email Settings
     SMTP_TLS: bool = True
