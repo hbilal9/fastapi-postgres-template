@@ -2,20 +2,103 @@
 
 This is a template project for a FastAPI application with a PostgreSQL database, pgAdmin for database management, and Traefik as a reverse proxy. All services are containerized using Docker.
 
+## Features
+
+- **FastAPI Backend**: High-performance API framework
+- **PostgreSQL Database**: Robust relational database
+- **Alembic Migrations**: Database versioning and migrations
+- **Docker & Docker Compose**: Containerization for consistent environments
+- **pgAdmin**: Database management UI
+- **Traefik**: API Gateway and reverse proxy
+- **Authentication**:
+  - JWT Token-based authentication (Bearer tokens)
+  - Cookie-based authentication with HTTP-only cookies
+  - Refresh token functionality
+  - Password reset functionality
+- **Environment-based configuration**: Different settings for development, staging, and production
+
 ## Prerequisites
 
-*   Docker and Docker Compose installed.
-*   A code editor (e.g., VS Code).
-*   A terminal or command prompt.
+- **Local Development**:
+  - Python 3.11 or higher
+  - PostgreSQL installed locally or accessible
+  - pip or another Python package manager
+
+- **Docker Deployment**:
+  - Docker and Docker Compose installed
+  - A code editor (e.g., VS Code)
+  - A terminal or command prompt
 
 ## Basic Configuration
 
 1.  **Environment Variables**:
-    This project uses a `.env` file for local development configuration. If it doesn't exist, run this command to create
+    This project uses a `.env` file for local development configuration. If it doesn't exist, run this command to create:
 
     ```
     cp .env.example .env
     ```
+
+    Ensure you set the following environment variables in your `.env` file:
+
+    ```
+    # Core settings
+    FRONTEND_URL='http://localhost:3000'
+    SECRET_KEY='your_32_char_strong_secret_key_here'
+    DEBUG=True
+    ENVIRONMENT='development'  # Options: development, staging, production
+    
+    # Database settings
+    POSTGRES_USER="your_username"
+    POSTGRES_PASSWORD="your_password"
+    POSTGRES_DB_NAME="fastapi_db"
+    DATABASE_URL="postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB_NAME}"
+    
+    # Authentication
+    ALGORITHM='HS256'
+    ACCESS_TOKEN_EXPIRE_MINUTES=30  # Short-lived access tokens for security
+    REFRESH_TOKEN_EXPIRE_DAYS=7     # Longer-lived refresh tokens
+    ```
+
+## Local Installation and Setup
+
+1. **Create a virtual environment**:
+
+   ```bash
+   # Using standard venv
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   # OR using uv (faster)
+   uv venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+2. **Install dependencies**:
+
+   ```bash
+   # Using pip
+   pip install -r requirements.txt
+   
+   # OR using uv (faster)
+   uv pip install -r requirements.txt
+   ```
+
+3. **Set up the database**:
+
+   Create your PostgreSQL database and run migrations:
+
+   ```bash
+   # Make sure you've set the correct DATABASE_URL in your .env file
+   alembic upgrade head
+   ```
+
+4. **Run the application**:
+
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+   The API will be available at http://localhost:8000
 
 ## Docker Build and Run
 
@@ -69,6 +152,31 @@ Once the containers are running:
 *   **Traefik Dashboard** (for inspecting routes and services):
     *   `http://localhost:8080`
 
+## Authentication
+
+This application supports two authentication methods:
+
+### 1. Bearer Token Authentication (Standard OAuth2)
+
+- **Login**: Send a POST request to `/api/auth/token` with username/password to get an access token
+- **Usage**: Include the token in the Authorization header: `Authorization: Bearer <your_token>`
+- **API Docs**: Works with Swagger UI's "Authorize" button
+
+### 2. Cookie-Based Authentication
+
+- **Login**: Send a POST request to `/api/auth/login` with username/password
+- **Security**: Tokens are stored in HTTP-only cookies for protection against XSS attacks
+- **Refresh**: When the access token expires, use `/api/auth/refresh` to get a new one
+- **Logout**: Send a POST request to `/api/auth/logout` to clear authentication cookies
+
+### Environment-Based Security
+
+Cookie security settings are automatically configured based on the `ENVIRONMENT` variable:
+
+- **Development**: Less restrictive settings (HTTP allowed, lax same-site policy)
+- **Staging**: HTTPS required, lax same-site policy
+- **Production**: HTTPS required, strict same-site policy
+
 ## pgAdmin: Connecting to the PostgreSQL Database
 
 After logging into pgAdmin, you'll need to register your PostgreSQL server (the `db` service from `docker-compose.yml`):
@@ -113,5 +221,26 @@ Your database server should now appear in the list, and you can browse its conte
 ├── README.md             # This file
 └── uv.lock               # Lock file for dependencies managed by uv
 ```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Errors**:
+   - Check if PostgreSQL is running
+   - Verify your DATABASE_URL in the .env file
+   - Ensure your PostgreSQL user has proper permissions
+
+2. **Authentication Issues**:
+   - Make sure SECRET_KEY is set correctly
+   - Check that COOKIE_SECURE is False in development if not using HTTPS
+
+3. **Alembic Migration Errors**:
+   - Run `alembic revision --autogenerate -m "message"` to create a new migration
+   - Check your database models for any issues
+
+### Getting Help
+
+If you encounter issues not covered here, please check the FastAPI documentation or create an issue in the repository.
 
 Happy coding!

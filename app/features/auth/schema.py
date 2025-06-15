@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, model_validator, ValidationError, ConfigDict
-from typing import Literal
+from typing import Optional
 import uuid
 from datetime import datetime
 
@@ -42,7 +42,23 @@ class UserResponse(UserBase):
     
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
+    
+class CookieTokenResponse(BaseModel):
+    success: bool = True
+    message: str = "Login successful"
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: Optional[str] = None
+    
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class LogoutResponse(BaseModel):
+    success: bool = True
+    message: str = "Logout successful"
 
 class ResetPasswordVerify(BaseModel):
     token: str

@@ -1,21 +1,27 @@
 from app.models.user import User
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
 from .schema import TokenResponse, UserCreate
 from fastapi.security import OAuth2PasswordBearer
-from app.utils.security import hash_password, verify_password, create_access_token, verify_access_token
-from typing import Union
+from app.utils.security import (
+    hash_password, verify_password, create_access_token, verify_access_token, verify_refresh_token, 
+    get_token_from_cookies, create_refresh_token
+)
+from typing import Union, Tuple
 from typing import Optional
 import uuid
 import hashlib
 from datetime import timedelta, datetime, timezone
+
+# Constants for error messages
+USER_NOT_FOUND_ERROR = "User not found"
 
 def get_user_by_id(db: Session, user_id: uuid.UUID) -> Optional[User]:
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail=USER_NOT_FOUND_ERROR
         )
     return user
 
@@ -24,7 +30,7 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail=USER_NOT_FOUND_ERROR
         )
     return user
 
@@ -83,7 +89,13 @@ def login_service(db: Session, email: str, password: str) -> TokenResponse:
         )
     
     access_token = create_access_token(data={"sub": user.email})
-    return TokenResponse(access_token=access_token, token_type="bearer")
+    refresh_token = create_refresh_token(data={"sub": user.email})
+    
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer"
+    )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
@@ -103,11 +115,46 @@ def get_current_user(token: str, db: Session) -> User:
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail=USER_NOT_FOUND_ERROR,
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     return user
+
+def get_current_user_from_cookie(request: Request, db: Session) -> User:
+    token = get_token_from_cookies(request, "access_token")
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    return get_current_user(token, db)
+
+def refresh_access_token(db: Session, refresh_token: str) -> str:
+    payload = verify_refresh_token(refresh_token)
+    
+    if not payload or "sub" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    email = payload.get("sub")
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    new_access_token = create_access_token(data={"sub": user.email})
+    return new_access_token
 
 def change_password_service(
     db: Session, 
@@ -129,10 +176,12 @@ def change_password_service(
         db.rollback()
         raise ValueError(f"Failed to change password: {str(e)}")
     
-async def create_password_reset_token_service(db: Session, email: str) -> Optional[str]:
-    user = get_user_by_email(db, email)
-    if not user:
-        return None
+async def create_password_reset_token_service(db: Session, email: str) -> Tuple[Optional[User], Optional[str]]:
+    user = None
+    try:
+        user = get_user_by_email(db, email)
+    except HTTPException:
+        return None, None
     
     token_data = {
         "id": str(user.id),

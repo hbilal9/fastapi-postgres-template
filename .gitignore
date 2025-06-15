@@ -6,5 +6,4 @@ misc/postgres-data/
 misc/pgadmin-data/
 venv/
 .venv/
-.env
 letsencrypt/
