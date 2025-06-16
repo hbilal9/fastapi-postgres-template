@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Email Verification{% endblock %}
+
+{% block header_title %}Verify Your Email Address{% endblock %}
+
+{% block content %}
+<p>Hello {{ first_name }},</p>
+
+<p>Thank you for registering! To complete your account setup and gain full access to our platform, please verify your email address by clicking the button below:</p>
+
+<a href="{{ verification_link }}" class="primary-btn">Verify Email</a>
+
+<p>If the button doesn't work, you can also click the following link or copy it to your browser:</p>
+<div class="secondary-info">
+    {{ verification_link }}
+</div>
+
+<div class="warning">
+    <strong>Important:</strong> This verification link will expire in {{ expiration_minutes|default(30) }} minutes for security reasons.
+</div>
+
+<p>If you didn't create an account, you can safely ignore this email.</p>
+{% endblock %}

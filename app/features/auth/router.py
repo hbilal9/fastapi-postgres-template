@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Request, Depends, BackgroundTasks, Response
+from fastapi import APIRouter, status, Request, Depends, BackgroundTasks, Response, Query
 from .service import (
     create_user_service,
     login_service,
@@ -20,16 +20,71 @@ from .schema import (
 from fastapi.security import OAuth2PasswordRequestForm
 from app.utils.dependencies import CurrentUser, DbSession
 from app.utils.rate_limiter import limiter
-from app.services.email_service import send_password_reset_email
+from app.services.email import send_password_reset_email
 from app.utils.security import (
     set_auth_cookies,
     delete_auth_cookies,
     get_token_from_cookies,
 )
 from fastapi import HTTPException
+from app.utils.config import settings
 import os
+from datetime import datetime, timezone, timedelta
+from typing import Optional
+from app.models.user import User
+from sqlalchemy import cast, JSON
+from sqlalchemy.dialects.postgresql import JSONB
+from .service import generate_verification_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+@router.get("/verify-email", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def verify_email(
+    request: Request, 
+    db: DbSession,
+    token: str = Query(..., description="Email verification token")
+):
+    
+    user = db.query(User).filter(
+        cast(User.user_data, JSONB)["verification_token"].astext == token
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification token"
+        )
+    if user.is_user_confirmed:
+        return {"message": "Email already verified. You can now log in."}
+    
+    if settings.USER_VERIFICATION_CHECK and user.user_data and "verification_expiry" in user.user_data:
+        expiry_str = user.user_data.get("verification_expiry")
+        try:
+            expiry = datetime.fromisoformat(expiry_str)
+            if datetime.now(timezone.utc) > expiry:
+                new_token = generate_verification_token()
+                new_expiry = datetime.now(timezone.utc) + timedelta(minutes=settings.USER_VERIFICATION_EXPIRE_MINUTES)
+                
+                user.user_data["verification_token"] = new_token
+                user.user_data["verification_expiry"] = new_expiry.isoformat()
+                db.commit()
+                print(f"New verification token for {user.email}: {new_token}")
+                
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verification token expired. A new token has been sent to your email."
+                )
+        except ValueError:
+            pass
+    user.is_user_confirmed = True
+    if user.user_data:
+        user.user_data["verified"] = True
+        user.user_data["verified_at"] = datetime.now(timezone.utc).isoformat()
+    
+    db.commit()
+    
+    return {"message": "Email verified successfully. You can now log in."}
 
 
 @router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
@@ -54,7 +109,6 @@ async def login_with_cookies(
     set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
     return CookieTokenResponse(message="Login successful")
 
-
 @router.post("/refresh", response_model=RefreshTokenResponse)
 @limiter.limit("10/minute")
 async def refresh_token(
@@ -63,7 +117,6 @@ async def refresh_token(
     db: DbSession,
     refresh_data: RefreshTokenRequest = None,
 ):
-    """Endpoint to refresh an access token using a refresh token"""
     refresh_token = None
     if refresh_data and refresh_data.refresh_token:
         refresh_token = refresh_data.refresh_token
@@ -85,29 +138,49 @@ async def refresh_token(
 
 @router.post("/logout", response_model=LogoutResponse)
 async def logout(response: Response):
-    """Logout endpoint that clears authentication cookies"""
     delete_auth_cookies(response)
     return LogoutResponse()
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-@limiter.limit("10/minute")
-async def register(request: Request, db: DbSession, user: UserCreate):
-    user = create_user_service(db, user)
-    if user:
-        return {
-            "message": "Account created successfully. You can now log in.",
-        }
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to create user account",
-    )
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def register(request: Request, user: UserCreate, db: DbSession, background_tasks: BackgroundTasks):
+    db_user = create_user_service(db=db, user_input=user, background_tasks=background_tasks)
+    if settings.USER_VERIFICATION_CHECK:
+        db_user.user_data = {"message": "Verification email sent. Please check your inbox to verify your account."}
+    
+    return db_user
 
+@router.get("/verification-status", status_code=status.HTTP_200_OK)
+async def verification_status(current_user: CurrentUser):
+    return {
+        "is_verified": current_user.is_user_confirmed,
+        "verification_required": settings.USER_VERIFICATION_CHECK
+    }
 
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
-async def get_user_profile(request: Request, user: CurrentUser):
-    return user
+async def get_current_user(current_user: CurrentUser):
+    return current_user
+
+
+@router.get("/test/reset-password-email", status_code=status.HTTP_200_OK)
+async def test_password_reset_email(background_tasks: BackgroundTasks):
+    email = "mtalha@texagon.io"
+    first_name = "Talha"
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    reset_link = f"{frontend_url}/auth/reset-password?token=test-token-12345"
+    
+    await send_password_reset_email(
+        background_tasks,
+        user_email=email,
+        first_name=first_name,
+        reset_link=reset_link,
+    )
+    
+    return {
+        "message": f"Test password reset email sent to {email}",
+        "reset_link": reset_link,
+    }
 
 
 @router.post("/reset-password/request", status_code=status.HTTP_200_OK)

@@ -12,13 +12,15 @@ class Settings:
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    # TODO : Change this to Orginal Domain
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
     )
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
     
-    USER_VERIFICATION_CHECK: bool = os.getenv("USER_VERIFICATION_CHECK", "False").lower() == "true"
-    USER_VERIFICATION_EXPIRE_MINUTES: int = int(os.getenv("USER_VERIFICATION_EXPIRE_MINUTES", "7"))
+    USER_VERIFICATION_CHECK: bool = os.getenv("USER_VERIFICATION_CHECK", "True").lower() == "true"
+    USER_VERIFICATION_EXPIRE_MINUTES: int = int(os.getenv("USER_VERIFICATION_EXPIRE_MINUTES", "3600")) # 1 hour
 
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development").lower()
     

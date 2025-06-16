@@ -19,7 +19,7 @@ services:
       - "80:80"
       - "8080:8080"
     networks:
-      - hbky
+      - app_network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # - "./letsencrypt:/letsencrypt"  # Persist certificates
@@ -37,9 +37,9 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - hbky
+      - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hbky -d fastapi_db"]
+      test: ["CMD-SHELL", "pg_isready -U texagon -d fastapi_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,7 +60,7 @@ services:
     volumes:
       - ./misc/pgadmin-data:/var/lib/pgadmin
     networks:
-      - hbky
+      - app_network
     depends_on:
       - db
 
@@ -83,7 +83,7 @@ services:
   #           uv run python -m app.commands.create_admin &&
   #           uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
   #   networks:
-  #     - hbky
+  #     - app_network
   #   depends_on:
   #     db:
   #       condition: service_healthy
@@ -91,7 +91,7 @@ services:
   #       condition: service_started
 
 networks:
-  hbky:
+  app_network:
     driver: bridge
 
 volumes:

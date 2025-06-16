@@ -244,7 +244,7 @@ After logging into pgAdmin, you'll need to register your PostgreSQL server (the 
     *   **Host name/address**: `db` (This is the service name of your PostgreSQL container in `docker-compose.yml`).
     *   **Port**: `5432` (Default PostgreSQL port).
     *   **Maintenance database**: `fastapi_db` (This is the `POSTGRES_DB` value from your `db` service environment).
-    *   **Username**: `hbky` (This is the `POSTGRES_USER` value).
+    *   **Username**: `texagon` (This is the `POSTGRES_USER` value).
     *   **Password**: `password` (This is the `POSTGRES_PASSWORD` value).
     *   You can leave other settings as default or adjust as needed.
 5.  Click **Save**.

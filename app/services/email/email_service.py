@@ -1,26 +1,13 @@
 import logging
 import smtplib
+import re
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 from typing import Optional
-import datetime
-
-from fastapi import BackgroundTasks
-from fastapi.templating import Jinja2Templates
 
 from app.utils.config import settings
 
 logger = logging.getLogger(__name__)
-
-templates_dir = Path(__file__).parent.parent / "templates"
-templates = Jinja2Templates(directory=str(templates_dir))
-
-
-def render_template(template_name: str, **kwargs) -> str:
-    """Render a template with the given context."""
-    template = templates.get_template(template_name)
-    return template.render(**kwargs)
 
 
 class EmailService:
@@ -50,8 +37,6 @@ class EmailService:
 
         if text_content is None:
             text_content = html_content.replace("<br>", "\n").replace("</p>", "\n</p>")
-            import re
-
             text_content = re.sub(r"<[^>]*>", "", text_content)
 
         part1 = MIMEText(text_content, "plain")
@@ -73,8 +58,7 @@ class EmailService:
 
             if not settings.EMAILS_FROM_EMAIL:
                 raise ValueError("EMAILS_FROM_EMAIL must be set")
-            server.sendmail(str(settings.EMAILS_FROM_EMAIL), email_to, message.as_string())
-
+            print(server.sendmail(str(settings.EMAILS_FROM_EMAIL), email_to, message.as_string()))
             server.quit()
 
             logger.info(f"Email sent successfully to {email_to}")
@@ -83,24 +67,5 @@ class EmailService:
         except Exception as e:
             logger.error(f"Error sending email: {str(e)}")
             return False
-
-
+# Singleton instance of the email service for use across the application --> Intentional by @mtalhazulf
 email_service = EmailService()
-
-async def send_password_reset_email(
-    background_tasks: BackgroundTasks, user_email: str, first_name: str, reset_link: str
-) -> None:
-    """Send password reset email."""
-    subject = "Reset Your Password"
-    current_year = datetime.datetime.now().year
-
-    html_content = render_template(
-        "emails/password_reset.html", first_name=first_name, reset_link=reset_link, current_year=current_year
-    )
-
-    background_tasks.add_task(
-        email_service.send_email,
-        email_to=user_email,
-        subject=subject,
-        html_content=html_content,
-    )
