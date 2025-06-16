@@ -145,9 +145,11 @@ async def logout(response: Response):
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def register(request: Request, user: UserCreate, db: DbSession, background_tasks: BackgroundTasks):
-    db_user = create_user_service(db=db, user_input=user, background_tasks=background_tasks)
+    db_user = await create_user_service(db=db, user_input=user, background_tasks=background_tasks)
     if settings.USER_VERIFICATION_CHECK:
-        db_user.user_data = {"message": "Verification email sent. Please check your inbox to verify your account."}
+        if not db_user.user_data:
+            db_user.user_data = {}
+        db_user.user_data["message"] = "Verification email sent. Please check your inbox to verify your account."
     
     return db_user
 

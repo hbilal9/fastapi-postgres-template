@@ -53,18 +53,41 @@ def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def create_user_service(
+async def create_user_service(
     db: Session, user_input: UserCreate, background_tasks: BackgroundTasks
 ) -> User:
     existing_user = db.query(User).filter(User.email == user_input.email).first()
+
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
-                "message": "invalid data",
-                "errors": {"email": ["email already exists"]},
-            },
-        )
+        if settings.USER_VERIFICATION_CHECK and not existing_user.is_user_confirmed:
+            verification_token = generate_verification_token()
+            expiration_time = datetime.now(timezone.utc) + timedelta(
+                minutes=settings.USER_VERIFICATION_EXPIRE_MINUTES
+            )
+            if not existing_user.user_data:
+                existing_user.user_data = {}
+
+            existing_user.user_data["verification_token"] = verification_token
+            existing_user.user_data["verification_expiry"] = expiration_time.isoformat()
+            db.commit()
+
+            verification_url = (
+                f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
+            )
+            email = VerificationEmail()
+            background_tasks.add_task(
+                email.send,
+                email_to=existing_user.email,
+                first_name=existing_user.first_name,
+                verification_link=verification_url,
+            )
+
+            return existing_user
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email Already Exists",
+            )
     user_data = {
         "first_name": user_input.first_name,
         "last_name": user_input.last_name,
@@ -86,16 +109,18 @@ def create_user_service(
             "verification_expiry": expiration_time.isoformat(),
             "verified": False,
         }
-        
-        verification_url = f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
+
+        verification_url = (
+            f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
+        )
         email = VerificationEmail()
         background_tasks.add_task(
             email.send,
             email_to=user_input.email,
             first_name=user_input.first_name,
-            verification_link=verification_url
+            verification_link=verification_url,
         )
-    
+
     db_user = User(**user_data)
     db.add(db_user)
     db.commit()

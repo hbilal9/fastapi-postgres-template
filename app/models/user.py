@@ -13,7 +13,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_user_confirmed = Column(Boolean, default=False, nullable=False)
-    user_data = Column(JSONB, nullable=True)
+    user_data = Column(JSONB, default={}, nullable=True)
     last_password_reset_token_hash = Column(String, nullable=True)
     last_password_reset_at = Column(DateTime(timezone=True), nullable=True)
 

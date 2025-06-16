@@ -1,18 +1,18 @@
-"""initial migration
+"""init_migration
 
-Revision ID: 42ab91d65155
+Revision ID: 1cd8732f4c1b
 Revises: 
-Create Date: 2025-06-11 14:11:17.851089
+Create Date: 2025-06-16 10:18:01.720019
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '42ab91d65155'
+revision: str = '1cd8732f4c1b'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,6 +28,8 @@ def upgrade() -> None:
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password_hash', sa.String(), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('is_user_confirmed', sa.Boolean(), nullable=False),
+    sa.Column('user_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('last_password_reset_token_hash', sa.String(), nullable=True),
     sa.Column('last_password_reset_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
