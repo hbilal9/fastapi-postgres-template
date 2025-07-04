@@ -9,6 +9,11 @@ class UserBase(BaseModel):
     email: EmailStr = Field(..., description="The user's email address")
     is_active: bool = Field(True, description="Indicates if the user is active")
 
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+    twofa_token: str | None = None
+
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, description="The user's password")
     
