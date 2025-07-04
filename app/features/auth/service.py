@@ -20,6 +20,10 @@ import uuid
 import secrets
 import hashlib
 from datetime import timedelta, datetime, timezone
+import pyotp
+import qrcode
+import io
+import base64
 
 USER_NOT_FOUND_ERROR = "User not found"
 
@@ -287,3 +291,24 @@ async def reset_password_service(db: Session, token: str, new_password: str) -> 
     db.add(user)
     db.commit()
     return True
+
+async def setup_2fa(db: Session, current_user: User) -> dict:
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user.twofa_secret:
+        secret = pyotp.random_base32()
+        user.twofa_secret = secret
+        db.commit()
+    else:
+        secret = user.twofa_secret
+
+    otp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name=user.email, issuer_name=settings.APP_NAME
+    )
+
+    qr = qrcode.make(otp_uri)
+    buf = io.BytesIO()
+    qr.save(buf, format='PNG')
+    qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    qr_code_url = f"data:image/png;base64,{qr_b64}"
+
+    return secret, qr_code_url
