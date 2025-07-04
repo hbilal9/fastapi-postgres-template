@@ -330,3 +330,12 @@ async def verify_2fa( db: Session, current_user: User,token: str) -> dict:
     else:
         raise HTTPException(status_code=400, detail="Invalid 2FA token")
     
+def check_2fa_token(user: User, token: str) -> bool:
+    """
+    Checks if the provided 2FA token is valid for the user.
+    """
+    if not user.twofa_enabled or not user.twofa_secret:
+        return True  # 2FA not enabled, so always pass
+    totp = pyotp.TOTP(user.twofa_secret)
+    return totp.verify(token)
+
