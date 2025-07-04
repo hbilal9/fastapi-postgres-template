@@ -34,7 +34,7 @@ from typing import Optional
 from app.models.user import User
 from sqlalchemy import cast, JSON
 from sqlalchemy.dialects.postgresql import JSONB
-from .service import generate_verification_token, setup_2fa
+from .service import generate_verification_token, setup_2fa, verify_2fa
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -243,3 +243,23 @@ async def setup_twofa(
         "qr_code": qr_code
     }
 
+@router.post("/2fa/verify", status_code=status.HTTP_200_OK)
+async def verify_twofa(
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    token: str
+):
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
+        )
+    
+    is_valid = await verify_2fa(db, current_user, token)
+    
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA token"
+        )
+    
+    return {"message": "2FA verification successful"}
