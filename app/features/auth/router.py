@@ -34,7 +34,7 @@ from typing import Optional
 from app.models.user import User
 from sqlalchemy import cast, JSON
 from sqlalchemy.dialects.postgresql import JSONB
-from .service import generate_verification_token
+from .service import generate_verification_token, setup_2fa
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -223,3 +223,23 @@ async def reset_password(request: Request, db: DbSession, data: ResetPasswordVer
             detail="Failed to reset password",
         )
     return {"message": "Password reset successfully"}
+
+@router.post("/2fa/setup", status_code=status.HTTP_200_OK)
+async def setup_twofa(
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+):
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
+        )
+    
+    secret, qr_code = await setup_2fa(db, current_user)
+    
+    return {
+        "message": "2FA setup successful",
+        "secret": secret,
+        "qr_code": qr_code
+    }
+
