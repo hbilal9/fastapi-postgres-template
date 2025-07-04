@@ -1,7 +1,7 @@
 from app.models.user import User
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status, Request, BackgroundTasks
-from .schema import TokenResponse, UserCreate
+from .schema import TokenResponse, UserCreate, LoginRequest
 from fastapi.security import OAuth2PasswordBearer
 from app.utils.security import (
     hash_password,
@@ -132,8 +132,8 @@ async def create_user_service(
     return db_user
 
 
-def login_service(db: Session, email: str, password: str) -> TokenResponse:
-    user = authenticate_user(db, email, password)
+def login_service(db: Session, user_input: LoginRequest) -> TokenResponse:
+    user = authenticate_user(db, email=user_input.email, password=user_input.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -146,6 +146,13 @@ def login_service(db: Session, email: str, password: str) -> TokenResponse:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email verification required. Please check your email inbox and verify your account.",
         )
+    
+    if user.twofa_enabled:
+        if not user_input.twofa_token or not check_2fa_token(user, user_input.twofa_token):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="2FA token required or invalid",
+            )
 
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
