@@ -9,6 +9,7 @@ from .service import (
 )
 from .schema import (
     UserCreate,
+    LoginRequest,
     UserResponse,
     TokenResponse,
     ResetPasswordVerify,
@@ -30,9 +31,8 @@ from fastapi import HTTPException
 from app.utils.config import settings
 import os
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 from app.models.user import User
-from sqlalchemy import cast, JSON
+from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import JSONB
 from .service import generate_verification_token, setup_2fa, verify_2fa
 
@@ -90,9 +90,9 @@ async def verify_email(
 @router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def login(
-    request: Request, db: DbSession, form_data: OAuth2PasswordRequestForm = Depends()
+    request: Request, db: DbSession, form_data: LoginRequest = Depends()
 ):
-    return login_service(db, form_data.username, form_data.password)
+    return login_service(db, form_data)
 
 
 @router.post(
@@ -103,9 +103,9 @@ async def login_with_cookies(
     request: Request,
     response: Response,
     db: DbSession,
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    form_data: LoginRequest = Depends(),
 ):
-    token_data = login_service(db, form_data.username, form_data.password)
+    token_data = login_service(db, form_data)
     set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
     return CookieTokenResponse(message="Login successful")
 
