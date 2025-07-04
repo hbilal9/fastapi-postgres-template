@@ -46,3 +46,11 @@ class LogoutResponse(BaseModel):
 class ResetPasswordVerify(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8, description="The new password for the user")
+
+class TwoFASetupResponse(BaseModel):
+    qr_code_url: str
+    secret: str
+
+class TwoFAVerifyRequest(BaseModel):
+    token: str
+
