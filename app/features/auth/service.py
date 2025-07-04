@@ -312,3 +312,21 @@ async def setup_2fa(db: Session, current_user: User) -> dict:
     qr_code_url = f"data:image/png;base64,{qr_b64}"
 
     return secret, qr_code_url
+
+
+async def verify_2fa( db: Session, current_user: User,token: str) -> dict:
+    """
+    Verifies the TOTP token provided by the user.
+    If valid, enables 2FA for the user.
+    """
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user.twofa_secret:
+        raise HTTPException(status_code=400, detail="2FA not set up")
+    totp = pyotp.TOTP(user.twofa_secret)
+    if totp.verify(token):
+        user.twofa_enabled = True
+        db.commit()
+        return {"message": "2FA enabled successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid 2FA token")
+    
