@@ -32,6 +32,8 @@ def upgrade() -> None:
     sa.Column('user_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('last_password_reset_token_hash', sa.String(), nullable=True),
     sa.Column('last_password_reset_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('twofa_enabled', sa.Boolean(), default=False, nullable=False),
+    sa.Column('twofa_secret', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')

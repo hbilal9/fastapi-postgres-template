@@ -16,6 +16,8 @@ class User(Base):
     user_data = Column(JSONB, default={}, nullable=True)
     last_password_reset_token_hash = Column(String, nullable=True)
     last_password_reset_at = Column(DateTime(timezone=True), nullable=True)
+    twofa_enabled = Column(Boolean, default=False, nullable=False)
+    twofa_secret = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     def __repr__(self):
