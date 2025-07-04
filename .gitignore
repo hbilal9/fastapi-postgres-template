@@ -9,4 +9,3 @@ venv/
 letsencrypt/
 .python-version
 .env
-.env.example
