@@ -18,7 +18,6 @@ from .schema import (
     RefreshTokenResponse,
     LogoutResponse,
 )
-from fastapi.security import OAuth2PasswordRequestForm
 from app.utils.dependencies import CurrentUser, DbSession
 from app.utils.rate_limiter import limiter
 from app.services.email import send_password_reset_email
@@ -30,11 +29,7 @@ from app.utils.security import (
 from fastapi import HTTPException
 from app.utils.config import settings
 import os
-from datetime import datetime, timezone, timedelta
-from app.models.user import User
-from sqlalchemy import cast
-from sqlalchemy.dialects.postgresql import JSONB
-from .service import generate_verification_token, setup_2fa, verify_2fa
+from .service import setup_2fa, verify_2fa, verify_email_service
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -45,46 +40,8 @@ async def verify_email(
     db: DbSession,
     token: str = Query(..., description="Email verification token")
 ):
-    
-    user = db.query(User).filter(
-        cast(User.user_data, JSONB)["verification_token"].astext == token
-    ).first()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification token"
-        )
-    if user.is_user_confirmed:
-        return {"message": "Email already verified. You can now log in."}
-    
-    if settings.USER_VERIFICATION_CHECK and user.user_data and "verification_expiry" in user.user_data:
-        expiry_str = user.user_data.get("verification_expiry")
-        try:
-            expiry = datetime.fromisoformat(expiry_str)
-            if datetime.now(timezone.utc) > expiry:
-                new_token = generate_verification_token()
-                new_expiry = datetime.now(timezone.utc) + timedelta(minutes=settings.USER_VERIFICATION_EXPIRE_MINUTES)
-                
-                user.user_data["verification_token"] = new_token
-                user.user_data["verification_expiry"] = new_expiry.isoformat()
-                db.commit()
-                print(f"New verification token for {user.email}: {new_token}")
-                
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Verification token expired. A new token has been sent to your email."
-                )
-        except ValueError:
-            pass
-    user.is_user_confirmed = True
-    if user.user_data:
-        user.user_data["verified"] = True
-        user.user_data["verified_at"] = datetime.now(timezone.utc).isoformat()
-    
-    db.commit()
-    
-    return {"message": "Email verified successfully. You can now log in."}
+    message = verify_email_service(db, token)
+    return {"message": message}
 
 
 @router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)

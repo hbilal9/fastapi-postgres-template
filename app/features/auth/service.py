@@ -1,5 +1,7 @@
 from app.models.user import User
 from sqlalchemy.orm import Session
+from sqlalchemy import cast
+from sqlalchemy.dialects.postgresql import JSONB
 from fastapi import HTTPException, status, Request, BackgroundTasks
 from .schema import TokenResponse, UserCreate, LoginRequest
 from fastapi.security import OAuth2PasswordBearer
@@ -346,3 +348,37 @@ def check_2fa_token(user: User, token: str) -> bool:
     totp = pyotp.TOTP(user.twofa_secret)
     return totp.verify(token)
 
+def verify_email_service(db: Session, token: str) -> str:
+    user = db.query(User).filter(
+        cast(User.user_data, JSONB)["verification_token"].astext == token
+    ).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification token"
+        )
+    if user.is_user_confirmed:
+        return "Email already verified. You can now log in."
+    if settings.USER_VERIFICATION_CHECK and user.user_data and "verification_expiry" in user.user_data:
+        expiry_str = user.user_data.get("verification_expiry")
+        try:
+            expiry = datetime.fromisoformat(expiry_str)
+            if datetime.now(timezone.utc) > expiry:
+                new_token = generate_verification_token()
+                new_expiry = datetime.now(timezone.utc) + timedelta(minutes=settings.USER_VERIFICATION_EXPIRE_MINUTES)
+                user.user_data["verification_token"] = new_token
+                user.user_data["verification_expiry"] = new_expiry.isoformat()
+                db.commit()
+                print(f"New verification token for {user.email}: {new_token}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verification token expired. A new token has been sent to your email."
+                )
+        except ValueError:
+            pass
+    user.is_user_confirmed = True
+    if user.user_data:
+        user.user_data["verified"] = True
+        user.user_data["verified_at"] = datetime.now(timezone.utc).isoformat()
+    db.commit()
+    return "Email verified successfully. You can now log in."
