@@ -61,6 +61,27 @@ This is a template project for a FastAPI application with a PostgreSQL database,
 
 ## Local Installation and Setup
 
+#### (Recommended uv)
+
+1. **Install dependencies directly with uv**:
+  
+   ```bash
+   # uv will make .venv automatically
+   uv sync
+   ```
+2. **Install new dependencies with uv**:
+
+   ```bash
+   uv add dependency_name
+   ```
+3. **Run server**:
+
+   ```bash
+   uv run uvicorn app.main:app --reload 
+   ```
+
+#### (Not recommended)
+
 1. **Create a virtual environment**:
 
    ```bash
@@ -83,7 +104,8 @@ This is a template project for a FastAPI application with a PostgreSQL database,
    uv pip install -r requirements.txt
    ```
 
-3. **Set up the database**:
+
+#### Set up the database:
 
    Create your PostgreSQL database and run migrations:
 
