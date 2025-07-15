@@ -215,7 +215,7 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> str:
         )
 
     email = payload.get("sub")
-    user = await db.query(User).filter(User.email == email).first()
+    user = await find_user_by_email(db, email)
 
     if not user:
         raise HTTPException(
@@ -262,7 +262,7 @@ async def create_password_reset_token_service(
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     user.last_password_reset_token_hash = token_hash
 
-    await db.add(user)
+    db.add(user)
     await db.commit()
 
     return user, token
@@ -298,7 +298,7 @@ async def reset_password_service(db: AsyncSession, token: str, new_password: str
     user.password_hash = hash_password(new_password)
     user.last_password_reset_token_hash = None
     user.last_password_reset_at = datetime.now(timezone.utc)
-    await db.add(user)
+    db.add(user)
     await db.commit()
     return True
 
@@ -338,7 +338,7 @@ async def verify_2fa( db: AsyncSession, current_user: User,token: str) -> dict:
     else:
         raise HTTPException(status_code=400, detail="Invalid 2FA token")
 
-async def check_2fa_token(user: User, token: str) -> bool:
+def check_2fa_token(user: User, token: str) -> bool:
     if not user.twofa_enabled or not user.twofa_secret:
         return True  # 2FA not enabled, so always pass
     totp = pyotp.TOTP(user.twofa_secret)
