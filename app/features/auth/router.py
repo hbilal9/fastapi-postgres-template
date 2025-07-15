@@ -40,7 +40,7 @@ async def verify_email(
     db: DbSession,
     token: str = Query(..., description="Email verification token")
 ):
-    message = verify_email_service(db, token)
+    message = await verify_email_service(db, token)
     return {"message": message}
 
 
@@ -49,7 +49,7 @@ async def verify_email(
 async def login(
     request: Request, db: DbSession, form_data: LoginRequest = Depends()
 ):
-    return login_service(db, form_data)
+    return await login_service(db, form_data)
 
 
 @router.post(
@@ -62,7 +62,7 @@ async def login_with_cookies(
     db: DbSession,
     form_data: LoginRequest = Depends(),
 ):
-    token_data = login_service(db, form_data)
+    token_data = await login_service(db, form_data)
     set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
     return CookieTokenResponse(message="Login successful")
 
@@ -86,7 +86,7 @@ async def refresh_token(
             detail="Refresh token is required",
         )
 
-    new_access_token = refresh_access_token(db, refresh_token)
+    new_access_token = await refresh_access_token(db, refresh_token)
     if get_token_from_cookies(request, "refresh_token"):
         set_auth_cookies(response, new_access_token, refresh_token)
 
