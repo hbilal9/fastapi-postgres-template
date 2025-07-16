@@ -26,8 +26,18 @@ import pyotp
 import qrcode
 import io
 import base64
-
-USER_NOT_FOUND_ERROR = "User not found"
+from app.utils.constants import (
+    TOKEN_TYPE_BEARER,
+    ACCESS_TOKEN_NAME,
+    USER_NOT_FOUND_ERROR,
+    EMAIL_ALREADY_EXISTS_ERROR,
+    EMAIL_VERIFICATION_REQUIRED_ERROR,
+    TWOFA_REQUIRED_ERROR,
+    INVALID_VERIFICATION_TOKEN_ERROR,
+    EMAIL_ALREADY_VERIFIED,
+    VERIFICATION_TOKEN_EXPIRED_ERROR,
+    EMAIL_VERIFIED_SUCCESS,
+)
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
@@ -96,7 +106,7 @@ async def create_user_service(
         else:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="An account with this email already exists.",
+                detail=EMAIL_ALREADY_EXISTS_ERROR,
             )
 
     user_data = {
@@ -147,21 +157,21 @@ async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResp
     if settings.USER_VERIFICATION_CHECK and not user.is_user_confirmed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email verification required. Please check your email inbox and verify your account.",
+            detail=EMAIL_VERIFICATION_REQUIRED_ERROR,
         )
     
     if user.twofa_enabled:
         if not user_input.twofa_token or not check_2fa_token(user, user_input.twofa_token):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="2FA token required or invalid",
+                detail=TWOFA_REQUIRED_ERROR,
             )
 
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
 
     return TokenResponse(
-        access_token=access_token, refresh_token=refresh_token, token_type="bearer"
+        access_token=access_token, refresh_token=refresh_token, token_type=TOKEN_TYPE_BEARER
     )
 
 
@@ -192,7 +202,7 @@ async def get_current_user(token: str, db: AsyncSession) -> User:
 
 
 async def get_current_user_from_cookie(request: Request, db: AsyncSession) -> User:
-    token = get_token_from_cookies(request, "access_token")
+    token = get_token_from_cookies(request, ACCESS_TOKEN_NAME)
 
     if not token:
         raise HTTPException(
@@ -353,10 +363,10 @@ async def verify_email_service(db: AsyncSession, token: str) -> str:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification token"
+            detail=INVALID_VERIFICATION_TOKEN_ERROR
         )
     if user.is_user_confirmed:
-        return "Email already verified. You can now log in."
+        return EMAIL_ALREADY_VERIFIED
     if settings.USER_VERIFICATION_CHECK and user.user_data and "verification_expiry" in user.user_data:
         expiry_str = user.user_data.get("verification_expiry")
         try:
@@ -370,7 +380,7 @@ async def verify_email_service(db: AsyncSession, token: str) -> str:
                 print(f"New verification token for {user.email}: {new_token}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Verification token expired. A new token has been sent to your email."
+                    detail=VERIFICATION_TOKEN_EXPIRED_ERROR,
                 )
         except ValueError:
             pass
@@ -379,4 +389,4 @@ async def verify_email_service(db: AsyncSession, token: str) -> str:
         user.user_data["verified"] = True
         user.user_data["verified_at"] = datetime.now(timezone.utc).isoformat()
     await db.commit()
-    return "Email verified successfully. You can now log in."
+    return EMAIL_VERIFIED_SUCCESS
