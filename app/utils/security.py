@@ -7,6 +7,8 @@ from passlib.context import CryptContext
 
 from app.utils.config import settings
 
+from .constants import ACCESS_TOKEN_NAME
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -81,7 +83,7 @@ def verify_refresh_token(token: str) -> Optional[Dict]:
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
     """Set HTTP-only cookies for authentication tokens"""
     response.set_cookie(
-        key="access_token",
+        key=ACCESS_TOKEN_NAME,
         value=access_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,  # True in production
@@ -102,19 +104,19 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
 
 def delete_auth_cookies(response: Response) -> None:
     """Delete authentication cookies"""
-    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key=ACCESS_TOKEN_NAME, path="/")
     response.delete_cookie(key="refresh_token", path="/api/auth/refresh")
 
 
 def get_token_from_cookies(
-    request: Request, token_type: str = "access_token"
+    request: Request, token_type: str = ACCESS_TOKEN_NAME
 ) -> Optional[str]:
     """Get token from cookies or authorization header"""
     # Try to get from cookies first
     token = request.cookies.get(token_type)
 
     # If not in cookies, try Authorization header
-    if not token and token_type == "access_token":
+    if not token and token_type == ACCESS_TOKEN_NAME:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
