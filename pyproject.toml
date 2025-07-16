@@ -1,5 +1,5 @@
 [project]
-name = "FastAPI Postgres Template"
+name = "FastAPI-Postgres-Template"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -46,4 +46,9 @@ dependencies = [
     "typing-extensions==4.13.2",
     "typing-inspection==0.4.1",
     "uvicorn==0.34.3",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
 ]
