@@ -1,8 +1,15 @@
 from typing import Annotated, AsyncGenerator
+
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncAttrs, async_sessionmaker
-from sqlalchemy.pool import AsyncAdaptedQueuePool
+from sqlalchemy.ext.asyncio import (
+    AsyncAttrs,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import AsyncAdaptedQueuePool
+
 from app.utils.config import settings
 
 engine = create_async_engine(
@@ -15,15 +22,17 @@ engine = create_async_engine(
     echo=False,
 )
 
+
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
-async_session = async_sessionmaker(bind=engine, class_=AsyncSession)
 
+async_session = async_sessionmaker(bind=engine, class_=AsyncSession)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
         yield session
+
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]

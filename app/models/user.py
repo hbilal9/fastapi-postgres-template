@@ -1,10 +1,13 @@
-from sqlalchemy import Column, String, Boolean, DateTime, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, String, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+
 from app.utils.database import Base
 
+
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     first_name = Column(String, nullable=False)
@@ -19,6 +22,9 @@ class User(Base):
     twofa_enabled = Column(Boolean, default=False, nullable=False)
     twofa_secret = Column(String, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
     def __repr__(self):
         return f"<User(email='{self.email}', first_name='{self.first_name}', last_name='{self.last_name}')>"

@@ -1,7 +1,8 @@
 import os
 from functools import lru_cache
+from typing import Literal, Optional
+
 from dotenv import load_dotenv
-from typing import Optional, Literal
 
 load_dotenv(override=True)
 
@@ -17,12 +18,16 @@ class Settings:
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
     )
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
-    
-    USER_VERIFICATION_CHECK: bool = os.getenv("USER_VERIFICATION_CHECK", "True").lower() == "true"
-    USER_VERIFICATION_EXPIRE_MINUTES: int = int(os.getenv("USER_VERIFICATION_EXPIRE_MINUTES", "3600")) # 1 hour
+
+    USER_VERIFICATION_CHECK: bool = (
+        os.getenv("USER_VERIFICATION_CHECK", "True").lower() == "true"
+    )
+    USER_VERIFICATION_EXPIRE_MINUTES: int = int(
+        os.getenv("USER_VERIFICATION_EXPIRE_MINUTES", "3600")
+    )  # 1 hour
 
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development").lower()
-    
+
     COOKIE_SECURE: bool = ENVIRONMENT in ["production", "staging"]
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = (
         "strict" if ENVIRONMENT == "production" else "lax"
@@ -49,7 +54,6 @@ class Settings:
         if not DATABASE_NAME or not DATABASE_USER or not DATABASE_PASSWORD:
             raise ValueError("Database configuration is incomplete.")
         return f"postgresql+asyncpg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
-
 
 
 @lru_cache()

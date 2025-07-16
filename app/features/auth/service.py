@@ -1,43 +1,45 @@
-from app.models.user import User
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import JSON, cast
-from fastapi import HTTPException, status, Request, BackgroundTasks
-from .schema import TokenResponse, UserCreate, LoginRequest
-from fastapi.security import OAuth2PasswordBearer
-from app.utils.security import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    verify_access_token,
-    verify_refresh_token,
-    get_token_from_cookies,
-    create_refresh_token,
-)
-from app.utils.config import settings
-from app.services.email import VerificationEmail
-from typing import Union, Tuple
-from typing import Optional
-import uuid
-import secrets
+import base64
 import hashlib
-from datetime import timedelta, datetime, timezone
+import io
+import secrets
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Tuple, Union
+
 import pyotp
 import qrcode
-import io
-import base64
+from fastapi import BackgroundTasks, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import JSON, cast
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from app.models.user import User
+from app.services.email import VerificationEmail
+from app.utils.config import settings
 from app.utils.constants import (
-    TOKEN_TYPE_BEARER,
     ACCESS_TOKEN_NAME,
-    USER_NOT_FOUND_ERROR,
     EMAIL_ALREADY_EXISTS_ERROR,
-    EMAIL_VERIFICATION_REQUIRED_ERROR,
-    TWOFA_REQUIRED_ERROR,
-    INVALID_VERIFICATION_TOKEN_ERROR,
     EMAIL_ALREADY_VERIFIED,
-    VERIFICATION_TOKEN_EXPIRED_ERROR,
+    EMAIL_VERIFICATION_REQUIRED_ERROR,
     EMAIL_VERIFIED_SUCCESS,
+    INVALID_VERIFICATION_TOKEN_ERROR,
+    TOKEN_TYPE_BEARER,
+    TWOFA_REQUIRED_ERROR,
+    USER_NOT_FOUND_ERROR,
+    VERIFICATION_TOKEN_EXPIRED_ERROR,
 )
+from app.utils.security import (
+    create_access_token,
+    create_refresh_token,
+    get_token_from_cookies,
+    hash_password,
+    verify_access_token,
+    verify_password,
+    verify_refresh_token,
+)
+
+from .schema import LoginRequest, TokenResponse, UserCreate
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
@@ -49,12 +51,14 @@ async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]
         )
     return user
 
+
 async def find_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     result = await db.execute(select(User).filter(User.email == email))
     user = result.scalar_one_or_none()
     if not user:
         return None
     return user
+
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     user = await find_user_by_email(db, email)
@@ -65,7 +69,9 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     return user
 
 
-async def authenticate_user(db: AsyncSession, email: str, password: str) -> Union[User, bool]:
+async def authenticate_user(
+    db: AsyncSession, email: str, password: str
+) -> Union[User, bool]:
     user = await find_user_by_email(db, email)
     if not user or not verify_password(password, user.password_hash):
         return False
@@ -94,7 +100,9 @@ async def create_user_service(
             existing_user.user_data["verification_expiry"] = expiration_time.isoformat()
             await db.commit()
 
-            verification_url = f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
+            verification_url = (
+                f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
+            )
             email = VerificationEmail()
             background_tasks.add_task(
                 email.send,
@@ -129,7 +137,9 @@ async def create_user_service(
             "verification_expiry": expiration_time.isoformat(),
             "verified": False,
         }
-        verification_url = f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
+        verification_url = (
+            f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
+        )
         email = VerificationEmail()
         background_tasks.add_task(
             email.send,
@@ -146,7 +156,9 @@ async def create_user_service(
 
 
 async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResponse:
-    user = await authenticate_user(db, email=user_input.email, password=user_input.password)
+    user = await authenticate_user(
+        db, email=user_input.email, password=user_input.password
+    )
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,9 +171,11 @@ async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResp
             status_code=status.HTTP_403_FORBIDDEN,
             detail=EMAIL_VERIFICATION_REQUIRED_ERROR,
         )
-    
+
     if user.twofa_enabled:
-        if not user_input.twofa_token or not check_2fa_token(user, user_input.twofa_token):
+        if not user_input.twofa_token or not check_2fa_token(
+            user, user_input.twofa_token
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=TWOFA_REQUIRED_ERROR,
@@ -171,7 +185,9 @@ async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResp
     refresh_token = create_refresh_token(data={"sub": user.email})
 
     return TokenResponse(
-        access_token=access_token, refresh_token=refresh_token, token_type=TOKEN_TYPE_BEARER
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type=TOKEN_TYPE_BEARER,
     )
 
 
@@ -300,7 +316,9 @@ async def verify_password_reset_service(db: AsyncSession, token: str) -> Optiona
     return user
 
 
-async def reset_password_service(db: AsyncSession, token: str, new_password: str) -> bool:
+async def reset_password_service(
+    db: AsyncSession, token: str, new_password: str
+) -> bool:
     user = await verify_password_reset_service(db, token)
     if not user:
         return False
@@ -311,6 +329,7 @@ async def reset_password_service(db: AsyncSession, token: str, new_password: str
     db.add(user)
     await db.commit()
     return True
+
 
 async def setup_2fa(db: AsyncSession, current_user: User) -> dict:
     result = await db.execute(select(User).filter(User.id == current_user.id))
@@ -328,14 +347,14 @@ async def setup_2fa(db: AsyncSession, current_user: User) -> dict:
 
     qr = qrcode.make(otp_uri)
     buf = io.BytesIO()
-    qr.save(buf, format='PNG')
-    qr_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    qr.save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
     qr_code_url = f"data:image/png;base64,{qr_b64}"
 
     return secret, qr_code_url
 
 
-async def verify_2fa( db: AsyncSession, current_user: User,token: str) -> dict:
+async def verify_2fa(db: AsyncSession, current_user: User, token: str) -> dict:
     result = await db.execute(select(User).filter(User.id == current_user.id))
     user = result.scalar_one()
     if not user.twofa_secret:
@@ -348,11 +367,13 @@ async def verify_2fa( db: AsyncSession, current_user: User,token: str) -> dict:
     else:
         raise HTTPException(status_code=400, detail="Invalid 2FA token")
 
+
 def check_2fa_token(user: User, token: str) -> bool:
     if not user.twofa_enabled or not user.twofa_secret:
         return True  # 2FA not enabled, so always pass
     totp = pyotp.TOTP(user.twofa_secret)
     return totp.verify(token)
+
 
 async def verify_email_service(db: AsyncSession, token: str) -> str:
     stmt = select(User).filter(
@@ -363,17 +384,23 @@ async def verify_email_service(db: AsyncSession, token: str) -> str:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=INVALID_VERIFICATION_TOKEN_ERROR
+            detail=INVALID_VERIFICATION_TOKEN_ERROR,
         )
     if user.is_user_confirmed:
         return EMAIL_ALREADY_VERIFIED
-    if settings.USER_VERIFICATION_CHECK and user.user_data and "verification_expiry" in user.user_data:
+    if (
+        settings.USER_VERIFICATION_CHECK
+        and user.user_data
+        and "verification_expiry" in user.user_data
+    ):
         expiry_str = user.user_data.get("verification_expiry")
         try:
             expiry = datetime.fromisoformat(expiry_str)
             if datetime.now(timezone.utc) > expiry:
                 new_token = generate_verification_token()
-                new_expiry = datetime.now(timezone.utc) + timedelta(minutes=settings.USER_VERIFICATION_EXPIRE_MINUTES)
+                new_expiry = datetime.now(timezone.utc) + timedelta(
+                    minutes=settings.USER_VERIFICATION_EXPIRE_MINUTES
+                )
                 user.user_data["verification_token"] = new_token
                 user.user_data["verification_expiry"] = new_expiry.isoformat()
                 db.commit()

@@ -1,48 +1,68 @@
-from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Tuple
+from typing import Dict, Optional
+
+from fastapi import Request, Response
 from jose import JWTError, jwt
+from passlib.context import CryptContext
+
 from app.utils.config import settings
-from fastapi import Response, Request
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+
     to_encode.update({"exp": expire, "token_type": "access"})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+    )
     return encoded_jwt
+
 
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    
+        expire = datetime.now(timezone.utc) + timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        )
+
     to_encode.update({"exp": expire, "token_type": "refresh"})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+    )
     return encoded_jwt
+
 
 def verify_token(token: str) -> Optional[Dict]:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        if "exp" in payload and datetime.fromtimestamp(payload["exp"], timezone.utc) < datetime.now(timezone.utc):
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if "exp" in payload and datetime.fromtimestamp(
+            payload["exp"], timezone.utc
+        ) < datetime.now(timezone.utc):
             return None
         return payload
     except JWTError:
         return None
+
 
 def verify_access_token(token: str) -> Optional[Dict]:
     payload = verify_token(token)
@@ -50,11 +70,13 @@ def verify_access_token(token: str) -> Optional[Dict]:
         return None
     return payload
 
+
 def verify_refresh_token(token: str) -> Optional[Dict]:
     payload = verify_token(token)
     if not payload or payload.get("token_type") != "refresh":
         return None
     return payload
+
 
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
     """Set HTTP-only cookies for authentication tokens"""
@@ -77,20 +99,24 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
         path="/api/auth/refresh",  # Restrict refresh token to refresh endpoint
     )
 
+
 def delete_auth_cookies(response: Response) -> None:
     """Delete authentication cookies"""
     response.delete_cookie(key="access_token", path="/")
     response.delete_cookie(key="refresh_token", path="/api/auth/refresh")
 
-def get_token_from_cookies(request: Request, token_type: str = "access_token") -> Optional[str]:
+
+def get_token_from_cookies(
+    request: Request, token_type: str = "access_token"
+) -> Optional[str]:
     """Get token from cookies or authorization header"""
     # Try to get from cookies first
     token = request.cookies.get(token_type)
-    
+
     # If not in cookies, try Authorization header
     if not token and token_type == "access_token":
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
-    
+
     return token

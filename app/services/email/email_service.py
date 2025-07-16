@@ -1,6 +1,6 @@
 import logging
-import smtplib
 import re
+import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
@@ -58,7 +58,11 @@ class EmailService:
 
             if not settings.EMAILS_FROM_EMAIL:
                 raise ValueError("EMAILS_FROM_EMAIL must be set")
-            print(server.sendmail(str(settings.EMAILS_FROM_EMAIL), email_to, message.as_string()))
+            print(
+                server.sendmail(
+                    str(settings.EMAILS_FROM_EMAIL), email_to, message.as_string()
+                )
+            )
             server.quit()
 
             logger.info(f"Email sent successfully to {email_to}")
@@ -67,5 +71,7 @@ class EmailService:
         except Exception as e:
             logger.error(f"Error sending email: {str(e)}")
             return False
+
+
 # Singleton instance of the email service for use across the application --> Intentional by @mtalhazulf
 email_service = EmailService()

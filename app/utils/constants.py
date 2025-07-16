@@ -8,6 +8,8 @@ INVALID_CREDENTIALS_ERROR = "Invalid credentials"
 EMAIL_VERIFICATION_REQUIRED_ERROR = "Email verification required. Please check your email inbox and verify your account."
 TWOFA_REQUIRED_ERROR = "2FA token required or invalid"
 INVALID_VERIFICATION_TOKEN_ERROR = "Invalid verification token"
-VERIFICATION_TOKEN_EXPIRED_ERROR = "Verification token expired. A new token has been sent to your email."
+VERIFICATION_TOKEN_EXPIRED_ERROR = (
+    "Verification token expired. A new token has been sent to your email."
+)
 EMAIL_VERIFIED_SUCCESS = "Email verified successfully. You can now log in."
 EMAIL_ALREADY_VERIFIED = "Email already verified. You can now log in."
