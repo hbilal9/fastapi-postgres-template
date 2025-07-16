@@ -7,7 +7,7 @@ load_dotenv(override=True)
 
 
 class Settings:
-    APP_NAME: str = os.getenv("APP_NAME", "Sophie CRM")
+    APP_NAME: str = os.getenv("APP_NAME", "FastAPI Postgres Template")
     SECRET_KEY: str = os.getenv("SECRET_KEY")
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
