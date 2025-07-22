@@ -1,6 +1,5 @@
 from functools import wraps
-from fastapi import HTTPException, status
-from typing import Type, Callable, Any
+from typing import Type, Callable
 from app.schema.pagination import PaginationResponseSchema
 
 def paginator(schema: Type):
