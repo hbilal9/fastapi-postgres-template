@@ -67,7 +67,7 @@ async def verify_email(
 async def login(request: Request, db: DbSession, form_data: LoginRequest):
     response = await login_service(db, form_data)
     return success_response(
-        data= TokenResponse(
+        data=TokenResponse(
             access_token=response.access_token,
             refresh_token=response.refresh_token,
             expires_in=response.expires_in,

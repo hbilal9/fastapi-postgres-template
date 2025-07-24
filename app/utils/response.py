@@ -1,6 +1,5 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 from pydantic import BaseModel
-from fastapi.responses import JSONResponse
 
 
 class StandardResponse(BaseModel):
@@ -14,7 +13,7 @@ class StandardResponse(BaseModel):
 
 
 def success_response(
-    data: Any = None, 
+    data: Any = None,
     meta_data: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     return {

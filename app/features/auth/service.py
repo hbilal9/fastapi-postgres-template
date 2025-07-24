@@ -404,8 +404,7 @@ async def verify_email_service(db: AsyncSession, token: str) -> str:
                 )
                 user.user_data["verification_token"] = new_token
                 user.user_data["verification_expiry"] = new_expiry.isoformat()
-                db.commit()
-                print(f"New verification token for {user.email}: {new_token}")
+                await db.commit()
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=VERIFICATION_TOKEN_EXPIRED_ERROR,
