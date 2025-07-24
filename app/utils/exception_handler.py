@@ -5,9 +5,9 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from .response import error_response
 
 def format_validation_errors(errors) -> Dict[str, List[str]]:
-    """Convert Pydantic validation errors to custom format"""
     formatted_errors = {}
 
     for error in errors:
@@ -33,38 +33,23 @@ def format_validation_errors(errors) -> Dict[str, List[str]]:
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Custom handler for validation errors"""
-    return JSONResponse(
-        status_code=422,
-        content={
-            "message": "invalid data",
-            "errors": format_validation_errors(exc.errors()),
-        },
+    validation_errors = format_validation_errors(exc.errors())
+    response_data = error_response(
+        error_message="Invalid request data",
+        error_details={"details": validation_errors}
     )
+    return JSONResponse(status_code=422, content=response_data)
 
 
 async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
-    """Custom handler for Pydantic validation errors"""
-    return JSONResponse(
-        status_code=422,
-        content={
-            "message": "invalid data",
-            "errors": format_validation_errors(exc.errors()),
-        },
+    validation_errors = format_validation_errors(exc.errors())
+    response_data = error_response(
+        error_message="Invalid request data",
+        error_details={"details": validation_errors}
     )
+    return JSONResponse(status_code=422, content=response_data)
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Custom handler for HTTP exceptions"""
-    # If the detail is already in our custom format, return it directly
-    if (
-        isinstance(exc.detail, dict)
-        and "message" in exc.detail
-        and "errors" in exc.detail
-    ):
-        return JSONResponse(status_code=exc.status_code, content=exc.detail)
-
-    # Otherwise, return the standard format
-    return JSONResponse(
-        status_code=exc.status_code, content={"message": str(exc.detail)}
-    )
+    response_data = error_response(error_message=str(exc.detail))
+    return JSONResponse(status_code=exc.status_code, content=response_data)
