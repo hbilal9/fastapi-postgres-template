@@ -44,10 +44,12 @@ from .service import (
     verify_password_reset_service,
 )
 
+from app.utils.response import success_response, StandardResponse
+
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.get("/verify-email", status_code=status.HTTP_200_OK)
+@router.get("/verify-email", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def verify_email(
     request: Request,
@@ -55,13 +57,22 @@ async def verify_email(
     token: str = Query(..., description="Email verification token"),
 ):
     message = await verify_email_service(db, token)
-    return {"message": message}
+    return success_response(
+        data={"message": message},
+    )
 
 
-@router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+@router.post("/token", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def login(request: Request, db: DbSession, form_data: LoginRequest = Depends()):
-    return await login_service(db, form_data)
+async def login(request: Request, db: DbSession, form_data: LoginRequest):
+    response = await login_service(db, form_data)
+    return success_response(
+        data= TokenResponse(
+            access_token=response.access_token,
+            refresh_token=response.refresh_token,
+            expires_in=response.expires_in,
+        )
+    )
 
 
 @router.post(
@@ -79,7 +90,7 @@ async def login_with_cookies(
     return CookieTokenResponse(message="Login successful")
 
 
-@router.post("/refresh", response_model=RefreshTokenResponse)
+@router.post("/refresh", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def refresh_token(
     request: Request,
@@ -103,13 +114,19 @@ async def refresh_token(
     if get_token_from_cookies(request, "refresh_token"):
         set_auth_cookies(response, new_access_token, refresh_token)
 
-    return RefreshTokenResponse(access_token=new_access_token)
+    return success_response(
+        data=RefreshTokenResponse(
+            access_token=new_access_token
+        )
+    )
 
 
-@router.post("/logout", response_model=LogoutResponse)
+@router.post("/logout", response_model=StandardResponse)
 async def logout(response: Response):
     delete_auth_cookies(response)
-    return LogoutResponse()
+    return success_response(
+        data=LogoutResponse()
+    )
 
 
 @router.post(
@@ -129,7 +146,9 @@ async def register(
             "Verification email sent. Please check your inbox to verify your account."
         )
 
-    return db_user
+    return success_response(
+        data=db_user
+    )
 
 
 @router.get("/verification-status", status_code=status.HTTP_200_OK)
@@ -140,9 +159,11 @@ async def verification_status(current_user: CurrentUser):
     }
 
 
-@router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
+@router.get("/me", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 async def get_current_user(current_user: CurrentUser):
-    return current_user
+    return success_response(
+        data=UserResponse(**current_user.__dict__)
+    )
 
 
 @router.get("/test/reset-password-email", status_code=status.HTTP_200_OK)
@@ -159,10 +180,13 @@ async def test_password_reset_email(background_tasks: BackgroundTasks):
         reset_link=reset_link,
     )
 
-    return {
-        "message": f"Test password reset email sent to {email}",
-        "reset_link": reset_link,
-    }
+    return success_response(
+        data={
+            "message": f"Test password reset email sent to {email}",
+            "reset_link": reset_link,
+        }
+    )
+
 
 
 @router.post("/reset-password/request", status_code=status.HTTP_200_OK)
@@ -183,9 +207,9 @@ async def create_password_reset_token(
             reset_link=reset_link,
         )
 
-    return {
-        "message": "If an account with that email exists, a password reset link has been sent to your email."
-    }
+    return success_response(
+        data={"message": "If an account with that email exists, a password reset link has been sent to your email."}
+    )
 
 
 @router.post("/reset-password")
@@ -202,7 +226,9 @@ async def reset_password(request: Request, db: DbSession, data: ResetPasswordVer
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to reset password",
         )
-    return {"message": "Password reset successfully"}
+    return success_response(
+        data={"message": "Password reset successful. You can now log in with your new password."}
+    )
 
 
 @router.post("/2fa/setup", status_code=status.HTTP_200_OK)
@@ -218,7 +244,9 @@ async def setup_twofa(
 
     secret, qr_code = await setup_2fa(db, current_user)
 
-    return {"message": "2FA setup successful", "secret": secret, "qr_code": qr_code}
+    return success_response(
+        data={"message": "2FA setup successful", "secret": secret, "qr_code": qr_code}
+    )
 
 
 @router.post("/2fa/verify", status_code=status.HTTP_200_OK)
@@ -237,4 +265,6 @@ async def verify_twofa(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA token"
         )
 
-    return {"message": "2FA verification successful"}
+    return success_response(
+        data={"message": "2FA verification successful"}
+    )
