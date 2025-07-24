@@ -188,6 +188,7 @@ async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResp
         access_token=access_token,
         refresh_token=refresh_token,
         token_type=TOKEN_TYPE_BEARER,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
 
