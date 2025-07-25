@@ -19,6 +19,7 @@ from app.utils.exception_handler import (
 )
 
 from .utils.logging import LogLevels, configure_logging
+from app.utils.response import success_response
 
 
 def create_app() -> FastAPI:
@@ -47,7 +48,12 @@ def create_app() -> FastAPI:
     # API health check endpoint
     @app.get("/api/health")
     async def health_check():
-        return JSONResponse({"status": "ok", "message": "API is running"})
+        return JSONResponse(
+            content=success_response(
+                data={"status": "ok", "message": "API is running"},
+                meta_data={"version": "1.0.0", "timestamp": "2024-07-24T10:00:00Z"}
+            )
+        )
 
     # Register API routes
     register_routes(app)
