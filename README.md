@@ -273,6 +273,53 @@ After logging into pgAdmin, you'll need to register your PostgreSQL server (the 
 
 Your database server should now appear in the list, and you can browse its contents, run queries, etc.
 
+
+## Use of Pagination
+```python
+#service.py
+from app.utils.pagination import paginator
+@paginator(UserSchema)
+async def get_users_service(
+    db: Session,
+    current_user: CurrentUser,
+    start_date: date = None,
+    end_date: date = None,
+    page: int = 1,
+    page_size: int = 10,
+):
+    query = db.query(UserModel)
+    if start_date:
+        query = query.filter(UserModel.created_at >= start_date)
+    if end_date:
+        query = query.filter(UserModel.created_at <= end_date)
+    return query
+
+
+#router.py
+from .service import users_service
+from app.schema.pagination import PaginationResponseSchema
+
+@router.get(
+    "/users",
+    response_model=PaginationResponseSchema[UserSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def get_users(
+    request: Request,
+    current_user: CurrentUser,
+    db_session: DbSession,
+    start_date: date = None,
+    end_date: date = None,
+    page: int = 1,
+    per_page: int = 10,
+):
+    users = await get_users_service(
+        db_session, current_user, start_date, end_date, page, per_page
+    )
+    return users
+
+```
+
 ## Project Structure (Brief Overview)
 
 ```
