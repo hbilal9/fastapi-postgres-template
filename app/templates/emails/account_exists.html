@@ -1,0 +1,23 @@
+{% extends "emails/base.html" %}
+
+{% block title %}An Account Already Exists{% endblock %}
+
+{% block header_title %}An Account Already Exists{% endblock %}
+
+{% block content %}
+<p>Hello {{ first_name }},</p>
+
+<p>It seems that you already have an account with us. If you forgot your password, you can reset it using the link below:</p>
+
+<div class="highlight" style="background-color: #e6f7ff; color: #0070f3; padding: 15px; border-radius: 6px; margin: 20px 0;">
+    <a href="{{ reset_password_url }}" style="color: #0070f3; text-decoration: none;">Reset your password</a>
+</div>
+
+<p>If you didn't request this email, please ignore it.</p>
+
+{% if login_url %}
+<div style="text-align: center;">
+    <a class="primary-btn" href="{{ login_url }}">Log in to your account</a>
+</div>
+{% endif %}
+{% endblock %}

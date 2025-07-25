@@ -7,6 +7,7 @@ from app.services.email.types import (
     PasswordResetEmail,
     VerificationEmail,
     WelcomeEmail,
+    AccountExistsEmail,
 )
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "BaseEmail",
     "PasswordResetEmail",
     "WelcomeEmail",
+    "AccountExistsEmail",
     "VerificationEmail",
     "NotificationEmail",
     "send_password_reset_email",
