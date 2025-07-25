@@ -1,11 +1,12 @@
 from fastapi import BackgroundTasks
-from app.services.email.email_service import email_service
+
 from app.services.email.base import BaseEmail
+from app.services.email.email_service import email_service
 from app.services.email.types import (
-    PasswordResetEmail,
-    WelcomeEmail,
-    VerificationEmail,
     NotificationEmail,
+    PasswordResetEmail,
+    VerificationEmail,
+    WelcomeEmail,
 )
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     "NotificationEmail",
     "send_password_reset_email",
 ]
+
 
 async def send_password_reset_email(
     background_tasks: BackgroundTasks, user_email: str, first_name: str, reset_link: str

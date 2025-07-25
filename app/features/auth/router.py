@@ -1,55 +1,67 @@
-from fastapi import APIRouter, status, Request, Depends, BackgroundTasks, Response, Query
-from .service import (
-    create_user_service,
-    login_service,
-    create_password_reset_token_service,
-    verify_password_reset_service,
-    reset_password_service,
-    refresh_access_token,
+import os
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
 )
-from .schema import (
-    UserCreate,
-    LoginRequest,
-    UserResponse,
-    TokenResponse,
-    ResetPasswordVerify,
-    CookieTokenResponse,
-    RefreshTokenRequest,
-    RefreshTokenResponse,
-    LogoutResponse,
-)
+
+from app.services.email import send_password_reset_email
+from app.utils.config import settings
 from app.utils.dependencies import CurrentUser, DbSession
 from app.utils.rate_limiter import limiter
-from app.services.email import send_password_reset_email
 from app.utils.security import (
-    set_auth_cookies,
     delete_auth_cookies,
     get_token_from_cookies,
+    set_auth_cookies,
 )
-from fastapi import HTTPException
-from app.utils.config import settings
-import os
-from .service import setup_2fa, verify_2fa, verify_email_service
+
+from .schema import (
+    CookieTokenResponse,
+    LoginRequest,
+    LogoutResponse,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
+    ResetPasswordVerify,
+    TokenResponse,
+    UserCreate,
+    UserResponse,
+)
+from .service import (
+    create_password_reset_token_service,
+    create_user_service,
+    login_service,
+    refresh_access_token,
+    reset_password_service,
+    setup_2fa,
+    verify_2fa,
+    verify_email_service,
+    verify_password_reset_service,
+)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
 
 @router.get("/verify-email", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def verify_email(
-    request: Request, 
+    request: Request,
     db: DbSession,
-    token: str = Query(..., description="Email verification token")
+    token: str = Query(..., description="Email verification token"),
 ):
-    message = verify_email_service(db, token)
+    message = await verify_email_service(db, token)
     return {"message": message}
 
 
 @router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def login(
-    request: Request, db: DbSession, form_data: LoginRequest = Depends()
-):
-    return login_service(db, form_data)
+async def login(request: Request, db: DbSession, form_data: LoginRequest = Depends()):
+    return await login_service(db, form_data)
 
 
 @router.post(
@@ -62,9 +74,10 @@ async def login_with_cookies(
     db: DbSession,
     form_data: LoginRequest = Depends(),
 ):
-    token_data = login_service(db, form_data)
+    token_data = await login_service(db, form_data)
     set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
     return CookieTokenResponse(message="Login successful")
+
 
 @router.post("/refresh", response_model=RefreshTokenResponse)
 @limiter.limit("10/minute")
@@ -86,7 +99,7 @@ async def refresh_token(
             detail="Refresh token is required",
         )
 
-    new_access_token = refresh_access_token(db, refresh_token)
+    new_access_token = await refresh_access_token(db, refresh_token)
     if get_token_from_cookies(request, "refresh_token"):
         set_auth_cookies(response, new_access_token, refresh_token)
 
@@ -99,23 +112,33 @@ async def logout(response: Response):
     return LogoutResponse()
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 @limiter.limit("5/minute")
-async def register(request: Request, user: UserCreate, db: DbSession, background_tasks: BackgroundTasks):
-    db_user = await create_user_service(db=db, user_input=user, background_tasks=background_tasks)
+async def register(
+    request: Request, user: UserCreate, db: DbSession, background_tasks: BackgroundTasks
+):
+    db_user = await create_user_service(
+        db=db, user_input=user, background_tasks=background_tasks
+    )
     if settings.USER_VERIFICATION_CHECK:
         if not db_user.user_data:
             db_user.user_data = {}
-        db_user.user_data["message"] = "Verification email sent. Please check your inbox to verify your account."
-    
+        db_user.user_data["message"] = (
+            "Verification email sent. Please check your inbox to verify your account."
+        )
+
     return db_user
+
 
 @router.get("/verification-status", status_code=status.HTTP_200_OK)
 async def verification_status(current_user: CurrentUser):
     return {
         "is_verified": current_user.is_user_confirmed,
-        "verification_required": settings.USER_VERIFICATION_CHECK
+        "verification_required": settings.USER_VERIFICATION_CHECK,
     }
+
 
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
 async def get_current_user(current_user: CurrentUser):
@@ -128,14 +151,14 @@ async def test_password_reset_email(background_tasks: BackgroundTasks):
     first_name = "Talha"
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
     reset_link = f"{frontend_url}/auth/reset-password?token=test-token-12345"
-    
+
     await send_password_reset_email(
         background_tasks,
         user_email=email,
         first_name=first_name,
         reset_link=reset_link,
     )
-    
+
     return {
         "message": f"Test password reset email sent to {email}",
         "reset_link": reset_link,
@@ -181,6 +204,7 @@ async def reset_password(request: Request, db: DbSession, data: ResetPasswordVer
         )
     return {"message": "Password reset successfully"}
 
+
 @router.post("/2fa/setup", status_code=status.HTTP_200_OK)
 async def setup_twofa(
     request: Request,
@@ -191,32 +215,26 @@ async def setup_twofa(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
         )
-    
+
     secret, qr_code = await setup_2fa(db, current_user)
-    
-    return {
-        "message": "2FA setup successful",
-        "secret": secret,
-        "qr_code": qr_code
-    }
+
+    return {"message": "2FA setup successful", "secret": secret, "qr_code": qr_code}
+
 
 @router.post("/2fa/verify", status_code=status.HTTP_200_OK)
 async def verify_twofa(
-    request: Request,
-    db: DbSession,
-    current_user: CurrentUser,
-    token: str
+    request: Request, db: DbSession, current_user: CurrentUser, token: str
 ):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
         )
-    
+
     is_valid = await verify_2fa(db, current_user, token)
-    
+
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA token"
         )
-    
+
     return {"message": "2FA verification successful"}

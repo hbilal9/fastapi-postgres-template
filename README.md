@@ -46,13 +46,13 @@ This is a template project for a FastAPI application with a PostgreSQL database,
     SECRET_KEY='your_32_char_strong_secret_key_here'
     DEBUG=True
     ENVIRONMENT='development'  # Options: development, staging, production
-    
+
     # Database settings
     POSTGRES_USER="your_username"
     POSTGRES_PASSWORD="your_password"
     POSTGRES_DB_NAME="fastapi_db"
     DATABASE_URL="postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB_NAME}"
-    
+
     # Authentication
     ALGORITHM='HS256'
     ACCESS_TOKEN_EXPIRE_MINUTES=30  # Short-lived access tokens for security
@@ -64,7 +64,7 @@ This is a template project for a FastAPI application with a PostgreSQL database,
 #### (Recommended uv)
 
 1. **Install dependencies directly with uv**:
-  
+
    ```bash
    # uv will make .venv automatically
    uv sync
@@ -77,7 +77,7 @@ This is a template project for a FastAPI application with a PostgreSQL database,
 3. **Run server**:
 
    ```bash
-   uv run uvicorn app.main:app --reload 
+   uv run uvicorn app.main:app --reload
    ```
 
 #### (Not recommended)
@@ -88,7 +88,7 @@ This is a template project for a FastAPI application with a PostgreSQL database,
    # Using standard venv
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   
+
    # OR using uv (faster)
    uv venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
@@ -99,7 +99,7 @@ This is a template project for a FastAPI application with a PostgreSQL database,
    ```bash
    # Using pip
    pip install -r requirements.txt
-   
+
    # OR using uv (faster)
    uv pip install -r requirements.txt
    ```
@@ -132,10 +132,10 @@ This project uses Alembic for managing database schema migrations. Understanding
    ```bash
    # Generate a migration automatically by detecting model changes
    alembic revision --autogenerate -m "describe_your_changes"
-   
+
    # Review the generated migration file in app/alembic/versions/
    # Make any necessary adjustments (e.g., adding default values for non-nullable columns)
-   
+
    # Apply the migration
    alembic upgrade head
    ```
@@ -145,13 +145,13 @@ This project uses Alembic for managing database schema migrations. Understanding
    ```bash
    # View current migration status
    alembic current
-   
+
    # View migration history
    alembic history
-   
+
    # Downgrade to a specific version
    alembic downgrade <revision_id>
-   
+
    # Downgrade one version
    alembic downgrade -1
    ```
