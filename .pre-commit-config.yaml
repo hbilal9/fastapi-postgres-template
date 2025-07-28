@@ -80,12 +80,12 @@ repos:
         additional_dependencies: ["bandit[toml]"]
         exclude: ^app/alembic/
 
-  - repo: https://github.com/hhatto/autopep8
-    rev: v2.3.2
-    hooks:
-      - id: autopep8
-        exclude: ^app/alembic/
-        args: ["--in-place", "--max-line-length=120"]
+  # - repo: https://github.com/hhatto/autopep8
+  #   rev: v2.3.2
+  #   hooks:
+  #     - id: autopep8
+  #       exclude: ^app/alembic/
+  #       args: ["--in-place", "--max-line-length=120"]
 
   # Optional: Uncomment if needed
   # - repo: https://github.com/pre-commit/mirrors-mypy
