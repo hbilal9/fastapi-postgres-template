@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.user import User
-from app.services.email import VerificationEmail
+from app.services.email import VerificationEmail, AccountExistsEmail
 from app.utils.config import settings
 from app.utils.constants import (
     ACCESS_TOKEN_NAME,
@@ -81,7 +81,7 @@ async def authenticate_user(
 def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
-
+import asyncio
 async def create_user_service(
     db: AsyncSession, user_input: UserCreate, background_tasks: BackgroundTasks
 ) -> User:
@@ -99,6 +99,7 @@ async def create_user_service(
             existing_user.user_data["verification_token"] = verification_token
             existing_user.user_data["verification_expiry"] = expiration_time.isoformat()
             await db.commit()
+            await db.refresh(existing_user)
 
             verification_url = (
                 f"{settings.FRONTEND_URL}/auth/verify?token={verification_token}"
@@ -112,6 +113,19 @@ async def create_user_service(
             )
             return existing_user
         else:
+            _, token = await create_password_reset_token_service(db, existing_user.email)
+            if token:
+                frontend_url = settings.FRONTEND_URL
+                reset_link = f"{frontend_url}/auth/reset-password?token={token}"
+
+                email = AccountExistsEmail()
+                background_tasks.add_task(
+                    email.send,
+                    email_to=existing_user.email,
+                    first_name=existing_user.first_name,
+                    reset_password_url=reset_link,
+                    login_link=f"{frontend_url}/auth/login",
+                )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=EMAIL_ALREADY_EXISTS_ERROR,
@@ -291,6 +305,7 @@ async def create_password_reset_token_service(
 
     db.add(user)
     await db.commit()
+    await db.refresh(user)
 
     return user, token
 
