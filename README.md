@@ -34,30 +34,29 @@ This is a template project for a FastAPI application with a PostgreSQL database,
 1.  **Environment Variables**:
     This project uses a `.env` file for local development configuration. If it doesn't exist, run this command to create:
 
-    ```
+    ```python
     cp .env.example .env
     ```
 
     Ensure you set the following environment variables in your `.env` file:
 
-    ```
-    # Core settings
-    FRONTEND_URL='http://localhost:3000'
-    SECRET_KEY='your_32_char_strong_secret_key_here'
-    DEBUG=True
-    ENVIRONMENT='development'  # Options: development, staging, production
+```python
+# Core settings
+FRONTEND_URL='http://localhost:3000'
+SECRET_KEY='your_32_char_strong_secret_key_here'
+DEBUG=True
+ENVIRONMENT='development'  # Options: development, staging, production
 
-    # Database settings
-    POSTGRES_USER="your_username"
-    POSTGRES_PASSWORD="your_password"
-    POSTGRES_DB_NAME="fastapi_db"
-    DATABASE_URL="postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB_NAME}"
+# Database settings
+POSTGRES_USER="your_username"
+POSTGRES_PASSWORD="your_password"
+POSTGRES_DB_NAME="fastapi_db"
 
-    # Authentication
-    ALGORITHM='HS256'
-    ACCESS_TOKEN_EXPIRE_MINUTES=30  # Short-lived access tokens for security
-    REFRESH_TOKEN_EXPIRE_DAYS=7     # Longer-lived refresh tokens
-    ```
+# Authentication
+ALGORITHM='HS256'
+ACCESS_TOKEN_EXPIRE_MINUTES=30  # Short-lived access tokens for security
+REFRESH_TOKEN_EXPIRE_DAYS=7     # Longer-lived refresh tokens
+```
 
 ## Local Installation and Setup
 
@@ -320,6 +319,40 @@ async def get_users(
 
 ```
 
+## Pre-commit Hooks
+This project uses pre-commit to automatically check and format code before each commit.
+Pre-commit hooks help enforce code style, catch errors early, and keep your codebase clean.
+
+### Install the hooks
+ ```
+uv run pre-commit install
+ ```
+### Update the hooks
+ ```
+uv run pre-commit autoupdate
+ ```
+### Run all hooks manually (recommended before your first commit):
+```
+uv run pre-commit run --all-files
+```
+### What gets checked?
+    Code formatting: black, autopep8, isort
+    Linting: flake8, bandit, autoflake
+    YAML and whitespace checks
+    Security checks: bandit
+### Troubleshooting
+If you add new hooks or update .pre-commit-config.yaml, run:
+```
+uv run pre-commit install
+uv run pre-commit autoupdate
+```
+To clear the pre-commit cache (if you see strange errors):
+```
+uv run pre-commit clean
+```
+
+
+
 ## Project Structure (Brief Overview)
 
 ```
@@ -362,6 +395,7 @@ async def get_users(
 3. **Alembic Migration Errors**:
    - Run `alembic revision --autogenerate -m "message"` to create a new migration
    - Check your database models for any issues
+
 
 ### Getting Help
 
