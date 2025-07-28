@@ -51,9 +51,12 @@ class Settings:
         DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
         DATABASE_HOST = os.getenv("DATABASE_HOST")
         DATABASE_PORT = os.getenv("DATABASE_PORT")
+        user_pass = f"{DATABASE_USER}:{DATABASE_PASSWORD}"
+        host_port = f"{DATABASE_HOST}:{DATABASE_PORT}"
+        db_driver = "postgresql+asyncpg"
         if not DATABASE_NAME or not DATABASE_USER or not DATABASE_PASSWORD:
             raise ValueError("Database configuration is incomplete.")
-        return f"postgresql+asyncpg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+        return f"{db_driver}://{user_pass}@{host_port}/{DATABASE_NAME}"
 
 
 @lru_cache()

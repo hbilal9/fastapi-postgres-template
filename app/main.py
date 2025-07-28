@@ -17,9 +17,9 @@ from app.utils.exception_handler import (
     pydantic_validation_exception_handler,
     validation_exception_handler,
 )
+from app.utils.response import success_response
 
 from .utils.logging import LogLevels, configure_logging
-from app.utils.response import success_response
 
 
 def create_app() -> FastAPI:
@@ -51,7 +51,7 @@ def create_app() -> FastAPI:
         return JSONResponse(
             content=success_response(
                 data={"status": "ok", "message": "API is running"},
-                meta_data={"version": "1.0.0", "timestamp": "2024-07-24T10:00:00Z"}
+                meta_data={"version": "1.0.0", "timestamp": "2024-07-24T10:00:00Z"},
             )
         )
 

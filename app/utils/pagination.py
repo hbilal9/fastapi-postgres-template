@@ -1,6 +1,20 @@
 from functools import wraps
-from typing import Type, Callable
-from app.schema.pagination import PaginationResponseSchema
+from typing import Callable, Generic, List, Type, TypeVar
+
+from pydantic import BaseModel, Field
+
+T = TypeVar("T")
+
+
+class PaginationResponseSchema(BaseModel, Generic[T]):
+    items: List[T] = Field(..., description="List of items in the current page")
+    total_items: int = Field(..., description="Total number of items across all pages")
+    total_pages: int = Field(..., description="Total number of pages available")
+    current_page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Number of items per page")
+    has_next: bool = Field(..., description="Indicates if there is a next page")
+    has_previous: bool = Field(..., description="Indicates if there is a previous page")
+
 
 def paginator(schema: Type):
     def decorator(func: Callable):
@@ -10,6 +24,7 @@ def paginator(schema: Type):
             page_size = kwargs.get("page_size")
             if page is None or page_size is None:
                 import inspect
+
                 sig = inspect.signature(func)
                 params = list(sig.parameters)
                 try:
@@ -34,5 +49,7 @@ def paginator(schema: Type):
                 has_next=page * page_size < total_items,
                 has_previous=page > 1,
             )
+
         return wrapper
+
     return decorator

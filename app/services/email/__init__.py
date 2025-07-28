@@ -3,11 +3,11 @@ from fastapi import BackgroundTasks
 from app.services.email.base import BaseEmail
 from app.services.email.email_service import email_service
 from app.services.email.types import (
+    AccountExistsEmail,
     NotificationEmail,
     PasswordResetEmail,
     VerificationEmail,
     WelcomeEmail,
-    AccountExistsEmail,
 )
 
 __all__ = [
