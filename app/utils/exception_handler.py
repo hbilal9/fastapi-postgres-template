@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from .response import error_response
 
+
 def format_validation_errors(errors) -> Dict[str, List[str]]:
     formatted_errors = {}
 
@@ -36,7 +37,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     validation_errors = format_validation_errors(exc.errors())
     response_data = error_response(
         error_message="Invalid request data",
-        error_details={"details": validation_errors}
+        error_details={"details": validation_errors},
     )
     return JSONResponse(status_code=422, content=response_data)
 
@@ -45,7 +46,7 @@ async def pydantic_validation_exception_handler(request: Request, exc: Validatio
     validation_errors = format_validation_errors(exc.errors())
     response_data = error_response(
         error_message="Invalid request data",
-        error_details={"details": validation_errors}
+        error_details={"details": validation_errors},
     )
     return JSONResponse(status_code=422, content=response_data)
 

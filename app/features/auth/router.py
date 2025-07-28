@@ -15,6 +15,7 @@ from app.services.email import send_password_reset_email
 from app.utils.config import settings
 from app.utils.dependencies import CurrentUser, DbSession
 from app.utils.rate_limiter import limiter
+from app.utils.response import StandardResponse, success_response
 from app.utils.security import (
     delete_auth_cookies,
     get_token_from_cookies,
@@ -44,12 +45,12 @@ from .service import (
     verify_password_reset_service,
 )
 
-from app.utils.response import success_response, StandardResponse
-
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.get("/verify-email", response_model=StandardResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/verify-email", response_model=StandardResponse, status_code=status.HTTP_200_OK
+)
 @limiter.limit("10/minute")
 async def verify_email(
     request: Request,
@@ -90,7 +91,9 @@ async def login_with_cookies(
     return CookieTokenResponse(message="Login successful")
 
 
-@router.post("/refresh", response_model=StandardResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/refresh", response_model=StandardResponse, status_code=status.HTTP_200_OK
+)
 @limiter.limit("10/minute")
 async def refresh_token(
     request: Request,
@@ -114,19 +117,13 @@ async def refresh_token(
     if get_token_from_cookies(request, "refresh_token"):
         set_auth_cookies(response, new_access_token, refresh_token)
 
-    return success_response(
-        data=RefreshTokenResponse(
-            access_token=new_access_token
-        )
-    )
+    return success_response(data=RefreshTokenResponse(access_token=new_access_token))
 
 
 @router.post("/logout", response_model=StandardResponse)
 async def logout(response: Response):
     delete_auth_cookies(response)
-    return success_response(
-        data=LogoutResponse()
-    )
+    return success_response(data=LogoutResponse())
 
 
 @router.post(
@@ -146,9 +143,7 @@ async def register(
             "Verification email sent. Please check your inbox to verify your account."
         )
 
-    return success_response(
-        data=db_user
-    )
+    return success_response(data=db_user)
 
 
 @router.get("/verification-status", status_code=status.HTTP_200_OK)
@@ -161,9 +156,7 @@ async def verification_status(current_user: CurrentUser):
 
 @router.get("/me", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 async def get_current_user(current_user: CurrentUser):
-    return success_response(
-        data=UserResponse(**current_user.__dict__)
-    )
+    return success_response(data=UserResponse(**current_user.__dict__))
 
 
 @router.get("/test/reset-password-email", status_code=status.HTTP_200_OK)
@@ -188,7 +181,6 @@ async def test_password_reset_email(background_tasks: BackgroundTasks):
     )
 
 
-
 @router.post("/reset-password/request", status_code=status.HTTP_200_OK)
 async def create_password_reset_token(
     request: Request, db: DbSession, email: str, background_tasks: BackgroundTasks
@@ -208,7 +200,9 @@ async def create_password_reset_token(
         )
 
     return success_response(
-        data={"message": "If an account with that email exists, a password reset link has been sent to your email."}
+        data={
+            "message": "If an account with that email exists, a password reset link has been sent to your email."
+        }
     )
 
 
@@ -227,7 +221,9 @@ async def reset_password(request: Request, db: DbSession, data: ResetPasswordVer
             detail="Failed to reset password",
         )
     return success_response(
-        data={"message": "Password reset successful. You can now log in with your new password."}
+        data={
+            "message": "Password reset successful. You can now log in with your new password."
+        }
     )
 
 
@@ -265,6 +261,4 @@ async def verify_twofa(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA token"
         )
 
-    return success_response(
-        data={"message": "2FA verification successful"}
-    )
+    return success_response(data={"message": "2FA verification successful"})

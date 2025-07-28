@@ -20,7 +20,7 @@ def configure_logging(log_level: str = LogLevels.error):
         return
 
     if log_level_str == LogLevels.debug.value:
-        logging.basicConfig(level=log_level_str, format=LOG_FORMAT_DEBUG)  # Use string
+        logging.basicConfig(level=log_level_str, format=LOG_FORMAT_DEBUG)
         return
 
     logging.basicConfig(level=log_level_str)

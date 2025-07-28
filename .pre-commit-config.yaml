@@ -24,13 +24,13 @@ repos:
           - --ignore-init-module-imports
 
   - repo: https://github.com/psf/black
-    rev: 24.4.2
+    rev: 25.1.0
     hooks:
       - id: black
         exclude: ^app/alembic/
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 6.0.1
     hooks:
       - id: isort
         name: isort (python)
@@ -46,7 +46,7 @@ repos:
         exclude: ^app/alembic/
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
+    rev: 7.3.0
     hooks:
       - id: flake8
         exclude: ^app/alembic/
@@ -57,17 +57,17 @@ repos:
             "--ignore",
             "E203,W503",
             "--max-line-length",
-            "150",
+            "120",
           ]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.7.21
+    rev: 0.8.3
     hooks:
       - id: uv-lock
 
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.8
+    rev: 1.8.6
     hooks:
       - id: bandit
         name: bandit
@@ -79,6 +79,13 @@ repos:
         types: [python]
         additional_dependencies: ["bandit[toml]"]
         exclude: ^app/alembic/
+
+  # - repo: https://github.com/hhatto/autopep8
+  #   rev: v2.3.2
+  #   hooks:
+  #     - id: autopep8
+  #       exclude: ^app/alembic/
+  #       args: ["--in-place", "--max-line-length=120"]
 
   # Optional: Uncomment if needed
   # - repo: https://github.com/pre-commit/mirrors-mypy

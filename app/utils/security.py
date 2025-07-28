@@ -80,7 +80,11 @@ def verify_refresh_token(token: str) -> Optional[Dict]:
     return payload
 
 
-def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+def set_auth_cookies(
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+) -> None:
     """Set HTTP-only cookies for authentication tokens"""
     response.set_cookie(
         key=ACCESS_TOKEN_NAME,
@@ -109,7 +113,8 @@ def delete_auth_cookies(response: Response) -> None:
 
 
 def get_token_from_cookies(
-    request: Request, token_type: str = ACCESS_TOKEN_NAME
+    request: Request,
+    token_type: str = ACCESS_TOKEN_NAME,
 ) -> Optional[str]:
     """Get token from cookies or authorization header"""
     # Try to get from cookies first

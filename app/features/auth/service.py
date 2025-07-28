@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.user import User
-from app.services.email import VerificationEmail, AccountExistsEmail
+from app.services.email import AccountExistsEmail, VerificationEmail
 from app.utils.config import settings
 from app.utils.constants import (
     ACCESS_TOKEN_NAME,
@@ -44,6 +44,7 @@ from .schema import LoginRequest, TokenResponse, UserCreate
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
     result = await db.execute(select(User).filter(User.id == user_id))
+
     user = result.scalars().first()
     if not user:
         raise HTTPException(
@@ -81,7 +82,7 @@ async def authenticate_user(
 def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
-import asyncio
+
 async def create_user_service(
     db: AsyncSession, user_input: UserCreate, background_tasks: BackgroundTasks
 ) -> User:
@@ -113,7 +114,9 @@ async def create_user_service(
             )
             return existing_user
         else:
-            _, token = await create_password_reset_token_service(db, existing_user.email)
+            _, token = await create_password_reset_token_service(
+                db, existing_user.email
+            )
             if token:
                 frontend_url = settings.FRONTEND_URL
                 reset_link = f"{frontend_url}/auth/reset-password?token={token}"
