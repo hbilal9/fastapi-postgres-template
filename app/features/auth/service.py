@@ -86,7 +86,8 @@ def generate_verification_token() -> str:
 async def create_user_service(
     db: AsyncSession, user_input: UserCreate, background_tasks: BackgroundTasks
 ) -> User:
-    existing_user = await find_user_by_email(db, user_input.email)
+    normalized_email = user_input.email.strip().lower()
+    existing_user = await find_user_by_email(db, normalized_email)
 
     if existing_user:
         if settings.USER_VERIFICATION_CHECK and not existing_user.is_user_confirmed:
@@ -137,7 +138,7 @@ async def create_user_service(
     user_data = {
         "first_name": user_input.first_name,
         "last_name": user_input.last_name,
-        "email": user_input.email,
+        "email": normalized_email,
         "is_active": True,
         "password_hash": hash_password(user_input.password),
         "is_user_confirmed": not settings.USER_VERIFICATION_CHECK,
@@ -160,7 +161,7 @@ async def create_user_service(
         email = VerificationEmail()
         background_tasks.add_task(
             email.send,
-            email_to=user_input.email,
+            email_to=normalized_email,
             first_name=user_input.first_name,
             verification_link=verification_url,
         )
@@ -173,8 +174,10 @@ async def create_user_service(
 
 
 async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResponse:
+    normalized_email = user_input.email.strip().lower()
+
     user = await authenticate_user(
-        db, email=user_input.email, password=user_input.password
+        db, email=normalized_email, password=user_input.password
     )
     if not user:
         raise HTTPException(
@@ -275,7 +278,6 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> str:
 async def change_password_service(
     db: AsyncSession, current_user: User, old_password: str, new_password: str
 ) -> User:
-
     if not verify_password(old_password, current_user.password_hash):
         raise ValueError("Old password is incorrect")
 
@@ -293,9 +295,10 @@ async def change_password_service(
 async def create_password_reset_token_service(
     db: AsyncSession, email: str
 ) -> Tuple[Optional[User], Optional[str]]:
+    normalized_email = email.strip().lower()
     user = None
     try:
-        user = await get_user_by_email(db, email)
+        user = await get_user_by_email(db, normalized_email)
     except HTTPException:
         return None, None
 
