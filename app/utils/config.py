@@ -58,6 +58,8 @@ class Settings:
             raise ValueError("Database configuration is incomplete.")
         return f"{db_driver}://{user_pass}@{host_port}/{DATABASE_NAME}"
 
+    SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
+
 
 @lru_cache()
 def get_settings():
