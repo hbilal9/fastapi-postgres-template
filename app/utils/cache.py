@@ -14,8 +14,8 @@ def _get_cache() -> Cache:
     if _cache_instance is None:
         _cache_instance = Cache.REDIS(
             endpoint=settings.REDIS_HOST,
-            port=int(settings.REDIS_PORT),
-            db=int(getattr(settings, "REDIS_DB", 0)),
+            port=settings.REDIS_PORT,
+            db=getattr(settings, "REDIS_DB", 0),
             namespace="main",
         )
     return _cache_instance
