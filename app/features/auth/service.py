@@ -136,8 +136,8 @@ async def create_user_service(
             )
 
     user_data = {
-        "first_name": user_input.first_name,
-        "last_name": user_input.last_name,
+        "first_name": user_input.first_name.strip().title(),
+        "last_name": user_input.last_name.strip().title(),
         "email": normalized_email,
         "is_active": True,
         "password_hash": hash_password(user_input.password),
@@ -162,7 +162,7 @@ async def create_user_service(
         background_tasks.add_task(
             email.send,
             email_to=normalized_email,
-            first_name=user_input.first_name,
+            first_name=user_input.first_name.strip().title(),
             verification_link=verification_url,
         )
 
