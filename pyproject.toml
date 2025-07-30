@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "aiocache[redis]>=0.12.3",
     "alembic==1.16.1",
     "annotated-types==0.7.0",
     "anyio==4.9.0",
