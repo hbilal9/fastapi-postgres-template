@@ -39,7 +39,7 @@ from app.utils.security import (
     verify_refresh_token,
 )
 
-from .schema import LoginRequest, TokenResponse, UserCreate
+from .schema import LoginRequestSchema, TokenResponseSchema, UserCreateSchema
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
@@ -84,7 +84,7 @@ def generate_verification_token() -> str:
 
 
 async def create_user_service(
-    db: AsyncSession, user_input: UserCreate, background_tasks: BackgroundTasks
+    db: AsyncSession, user_input: UserCreateSchema, background_tasks: BackgroundTasks
 ) -> User:
     normalized_email = user_input.email.strip().lower()
     existing_user = await find_user_by_email(db, normalized_email)
@@ -173,7 +173,9 @@ async def create_user_service(
     return db_user
 
 
-async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResponse:
+async def login_service(
+    db: AsyncSession, user_input: LoginRequestSchema
+) -> TokenResponseSchema:
     normalized_email = user_input.email.strip().lower()
 
     user = await authenticate_user(
@@ -204,7 +206,7 @@ async def login_service(db: AsyncSession, user_input: LoginRequest) -> TokenResp
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
 
-    return TokenResponse(
+    return TokenResponseSchema(
         access_token=access_token,
         refresh_token=refresh_token,
         token_type=TOKEN_TYPE_BEARER,

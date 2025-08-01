@@ -5,24 +5,24 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class UserBase(BaseModel):
+class UserBaseSchema(BaseModel):
     first_name: str = Field(..., description="The user's first name")
     last_name: str = Field(..., description="The user's last name")
     email: EmailStr = Field(..., description="The user's email address")
     is_active: bool = Field(True, description="Indicates if the user is active")
 
 
-class LoginRequest(BaseModel):
+class LoginRequestSchema(BaseModel):
     email: EmailStr
     password: str
     twofa_token: Optional[str] = None
 
 
-class UserCreate(UserBase):
+class UserCreateSchema(UserBaseSchema):
     password: str = Field(..., min_length=8, description="The user's password")
 
 
-class UserResponse(UserBase):
+class UserResponseSchema(UserBaseSchema):
     id: uuid.UUID
     first_name: str
     last_name: str
@@ -34,43 +34,43 @@ class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TokenResponse(BaseModel):
+class TokenResponseSchema(BaseModel):
     access_token: str
     refresh_token: Optional[str] = None
     token_type: str = "bearer"
     expires_in: int
 
 
-class CookieTokenResponse(BaseModel):
+class CookieTokenResponseSchema(BaseModel):
     success: bool = True
     message: str = "Login successful"
 
 
-class RefreshTokenRequest(BaseModel):
+class RefreshTokenRequestSchema(BaseModel):
     refresh_token: Optional[str] = None
 
 
-class RefreshTokenResponse(BaseModel):
+class RefreshTokenResponseSchema(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
 
-class LogoutResponse(BaseModel):
+class LogoutResponseSchema(BaseModel):
     success: bool = True
     message: str = "Logout successful"
 
 
-class ResetPasswordVerify(BaseModel):
+class ResetPasswordVerifySchema(BaseModel):
     token: str
     new_password: str = Field(
         ..., min_length=8, description="The new password for the user"
     )
 
 
-class TwoFASetupResponse(BaseModel):
+class TwoFASetupResponseSchema(BaseModel):
     qr_code_url: str
     secret: str
 
 
-class TwoFAVerifyRequest(BaseModel):
+class TwoFAVerifyRequestSchema(BaseModel):
     token: str

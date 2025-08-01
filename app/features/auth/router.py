@@ -23,15 +23,15 @@ from app.utils.security import (
 )
 
 from .schema import (
-    CookieTokenResponse,
-    LoginRequest,
-    LogoutResponse,
-    RefreshTokenRequest,
-    RefreshTokenResponse,
-    ResetPasswordVerify,
-    TokenResponse,
-    UserCreate,
-    UserResponse,
+    CookieTokenResponseSchema,
+    LoginRequestSchema,
+    LogoutResponseSchema,
+    RefreshTokenRequestSchema,
+    RefreshTokenResponseSchema,
+    ResetPasswordVerifySchema,
+    TokenResponseSchema,
+    UserCreateSchema,
+    UserResponseSchema,
 )
 from .service import (
     create_password_reset_token_service,
@@ -65,10 +65,10 @@ async def verify_email(
 
 @router.post("/token", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def login(request: Request, db: DbSession, form_data: LoginRequest):
+async def login(request: Request, db: DbSession, form_data: LoginRequestSchema):
     response = await login_service(db, form_data)
     return success_response(
-        data=TokenResponse(
+        data=TokenResponseSchema(
             access_token=response.access_token,
             refresh_token=response.refresh_token,
             expires_in=response.expires_in,
@@ -77,18 +77,18 @@ async def login(request: Request, db: DbSession, form_data: LoginRequest):
 
 
 @router.post(
-    "/login", response_model=CookieTokenResponse, status_code=status.HTTP_200_OK
+    "/login", response_model=CookieTokenResponseSchema, status_code=status.HTTP_200_OK
 )
 @limiter.limit("10/minute")
 async def login_with_cookies(
     request: Request,
     response: Response,
     db: DbSession,
-    form_data: LoginRequest = Depends(),
+    form_data: LoginRequestSchema = Depends(),
 ):
     token_data = await login_service(db, form_data)
     set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
-    return CookieTokenResponse(message="Login successful")
+    return CookieTokenResponseSchema(message="Login successful")
 
 
 @router.post(
@@ -99,7 +99,7 @@ async def refresh_token(
     request: Request,
     response: Response,
     db: DbSession,
-    refresh_data: RefreshTokenRequest = None,
+    refresh_data: RefreshTokenRequestSchema = None,
 ):
     refresh_token = None
     if refresh_data and refresh_data.refresh_token:
@@ -117,21 +117,26 @@ async def refresh_token(
     if get_token_from_cookies(request, "refresh_token"):
         set_auth_cookies(response, new_access_token, refresh_token)
 
-    return success_response(data=RefreshTokenResponse(access_token=new_access_token))
+    return success_response(
+        data=RefreshTokenResponseSchema(access_token=new_access_token)
+    )
 
 
 @router.post("/logout", response_model=StandardResponse)
 async def logout(response: Response):
     delete_auth_cookies(response)
-    return success_response(data=LogoutResponse())
+    return success_response(data=LogoutResponseSchema())
 
 
 @router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+    "/register", response_model=UserResponseSchema, status_code=status.HTTP_201_CREATED
 )
 @limiter.limit("5/minute")
 async def register(
-    request: Request, user: UserCreate, db: DbSession, background_tasks: BackgroundTasks
+    request: Request,
+    user: UserCreateSchema,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
 ):
     db_user = await create_user_service(
         db=db, user_input=user, background_tasks=background_tasks
@@ -156,7 +161,7 @@ async def verification_status(current_user: CurrentUser):
 
 @router.get("/me", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 async def get_current_user(current_user: CurrentUser):
-    return success_response(data=UserResponse(**current_user.__dict__))
+    return success_response(data=UserResponseSchema(**current_user.__dict__))
 
 
 @router.get("/test/reset-password-email", status_code=status.HTTP_200_OK)
@@ -207,7 +212,9 @@ async def create_password_reset_token(
 
 
 @router.post("/reset-password")
-async def reset_password(request: Request, db: DbSession, data: ResetPasswordVerify):
+async def reset_password(
+    request: Request, db: DbSession, data: ResetPasswordVerifySchema
+):
     user = await verify_password_reset_service(db, data.token)
     if not user:
         raise HTTPException(
