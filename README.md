@@ -351,6 +351,27 @@ To clear the pre-commit cache (if you see strange errors):
 uv run pre-commit clean
 ```
 
+## Cache Management
+```python
+from app.utils.cache import cache_response, invalidate_cache_key
+
+
+@router.get("/items")
+@cache_response(ttl=15, key="items") #ttl is time to live in seconds
+async def get_items():
+    items = await fetch_items_from_db()  # Replace with actual DB fetch logic
+    return items
+
+# invalidate cache for items
+@router.post("/add-items")
+async def add_item(item):
+    item = await add_item_to_db(item)  # Replace with actual DB insert logic
+    # Invalidate the cache for items
+    await invalidate_cache_key("items")
+    return {"message": "Items added to cache"}
+
+```
+
 
 
 ## Project Structure (Brief Overview)

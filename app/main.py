@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +21,11 @@ from app.utils.exception_handler import (
 from app.utils.response import success_response
 
 from .utils.logging import LogLevels, configure_logging
+
+sentry_sdk.init(
+    dsn=settings.SENTRY_DSN,
+    send_default_pii=True,
+)
 
 
 def create_app() -> FastAPI:
