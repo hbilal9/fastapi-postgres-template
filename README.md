@@ -78,6 +78,10 @@ REFRESH_TOKEN_EXPIRE_DAYS=7     # Longer-lived refresh tokens
    ```bash
    uv run uvicorn app.main:app --reload
    ```
+   OR if you have make available
+   ```
+   make start
+   ```
 
 #### (Not recommended)
 
@@ -112,6 +116,10 @@ REFRESH_TOKEN_EXPIRE_DAYS=7     # Longer-lived refresh tokens
    # Make sure you've set the correct DATABASE_URL in your .env file
    alembic upgrade head
    ```
+   OR if you have make available
+   ```
+   make alembic-upgrade
+   ```
 
 ### Database Migrations Guide
 
@@ -130,29 +138,32 @@ This project uses Alembic for managing database schema migrations. Understanding
 
    ```bash
    # Generate a migration automatically by detecting model changes
-   alembic revision --autogenerate -m "describe_your_changes"
+   uv run alembic revision --autogenerate -m "Add new user table"
+
+   # or with make
+   make alembic-revision MSG="Add new user table"
 
    # Review the generated migration file in app/alembic/versions/
    # Make any necessary adjustments (e.g., adding default values for non-nullable columns)
 
    # Apply the migration
-   alembic upgrade head
+   uv run alembic upgrade head
    ```
 
 3. **Common Migration Tasks:**
 
    ```bash
    # View current migration status
-   alembic current
+   uv run alembic current
 
    # View migration history
-   alembic history
+   uv run alembic history
 
    # Downgrade to a specific version
-   alembic downgrade <revision_id>
+  uv run  alembic downgrade <revision_id>
 
    # Downgrade one version
-   alembic downgrade -1
+   uv run alembic downgrade -1
    ```
 
 4. **Important Considerations:**
@@ -171,7 +182,7 @@ This project uses Alembic for managing database schema migrations. Understanding
 4. **Run the application**:
 
    ```bash
-   uvicorn app.main:app --reload
+   uv run uvicorn app.main:app --reload
    ```
 
    The API will be available at http://localhost:8000
