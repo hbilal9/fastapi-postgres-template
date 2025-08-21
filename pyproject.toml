@@ -51,4 +51,9 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
+    "ruff>=0.12.9",
 ]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "C", "B"]
