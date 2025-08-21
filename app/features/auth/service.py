@@ -45,20 +45,17 @@ from .schema import LoginRequestSchema, TokenResponseSchema, UserCreateSchema
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
     result = await db.execute(select(User).filter(User.id == user_id))
 
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=USER_NOT_FOUND_ERROR
-        )
-    return user
+    if user := result.scalars().first():
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail=USER_NOT_FOUND_ERROR
+    )
 
 
 async def find_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     result = await db.execute(select(User).filter(User.email == email))
     user = result.scalar_one_or_none()
-    if not user:
-        return None
-    return user
+    return user or None
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
@@ -273,8 +270,7 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    new_access_token = create_access_token(data={"sub": user.email})
-    return new_access_token
+    return create_access_token(data={"sub": user.email})
 
 
 async def change_password_service(
@@ -291,7 +287,7 @@ async def change_password_service(
         return current_user
     except Exception as e:
         await db.rollback()
-        raise ValueError(f"Failed to change password: {str(e)}")
+        raise ValueError(f"Failed to change password: {str(e)}") from e
 
 
 async def create_password_reset_token_service(
