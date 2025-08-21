@@ -58,6 +58,11 @@ class Settings:
             raise ValueError("Database configuration is incomplete.")
         return f"{db_driver}://{user_pass}@{host_port}/{DATABASE_NAME}"
 
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
+
 
 @lru_cache()
 def get_settings():
