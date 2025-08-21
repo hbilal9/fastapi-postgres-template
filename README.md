@@ -351,6 +351,36 @@ To clear the pre-commit cache (if you see strange errors):
 uv run pre-commit clean
 ```
 
+### Lint, Format & Start (Development)
+
+This repo includes Make targets to run linting, formatting, and start the dev server. You can use the Makefile targets or run the underlying commands directly with `uv`.
+
+- Run linter (ruff):
+```bash
+make lint
+# or
+uv run ruff check ./app
+```
+
+- Format code (ruff):
+```bash
+make format
+# or
+uv run ruff format ./app
+```
+
+- Start development server (uvicorn with auto-reload):
+```bash
+make start
+# or
+uv run uvicorn app.main:app --reload
+```
+
+Notes:
+- `uv` will create/manage the virtual environment for you if you use it.
+- If you don't have `make` available, use the `uv run ...` commands shown above.
+- Run `pre-commit run --all-files` to apply all pre-commit checks and auto-fixes before committing.
+
 
 
 ## Project Structure (Brief Overview)
