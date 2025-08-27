@@ -15,9 +15,11 @@ class RefreshToken(Base):
     token_hash = Column(
         String, unique=True, index=True
     )  # Store hash instead of raw token
-    expires_at = Column(DateTime)
+    expires_at = Column(DateTime(timezone=True))  # Add timezone=True
     is_revoked = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )  # Add timezone=True
 
     # Relationships
     user = relationship("User", back_populates="refresh_tokens")
@@ -31,7 +33,9 @@ class LoginAttempt(Base):
     success = Column(Boolean, default=False)
     ip_address = Column(String)
     user_agent = Column(String)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )  # Add timezone=True
 
     # Relationships
     user = relationship("User", back_populates="login_attempts")

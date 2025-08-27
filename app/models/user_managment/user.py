@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import relationship
 
 from app.utils.database import Base
 
@@ -25,6 +26,9 @@ class User(Base):
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
+    login_attempts = relationship("LoginAttempt", back_populates="user")
 
     def __repr__(self):
         return f"<User(email='{self.email}', first_name='{self.first_name}', last_name='{self.last_name}')>"

@@ -8,7 +8,7 @@ from typing import Optional, Tuple, Union
 
 import pyotp
 import qrcode
-from fastapi import BackgroundTasks, HTTPException, Request, status
+from fastapi import BackgroundTasks, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import JSON, cast
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +32,7 @@ from app.utils.constants import (
 from app.utils.security import (
     create_access_token,
     create_refresh_token,
+    delete_auth_cookies,
     get_token_from_cookies,
     hash_password,
     hash_token,
@@ -212,6 +213,7 @@ async def login_service(
         + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
     db.add(db_refresh_token)
+    await db.commit()
 
     return TokenResponseSchema(
         access_token=access_token,
@@ -219,6 +221,21 @@ async def login_service(
         token_type=TOKEN_TYPE_BEARER,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
+
+
+async def logout_user_session(request: Request, response: Response, db: AsyncSession):
+    if refresh_token := request.cookies.get("refresh_token"):
+        hashed_token = hash_token(refresh_token)
+        result = await db.execute(
+            select(RefreshToken).filter(RefreshToken.token_hash == hashed_token)
+        )
+        if db_token := result.scalar_one_or_none():
+            db_token.is_revoked = True
+            await db.commit()
+
+    # Clear both token cookies
+    delete_auth_cookies(response)
+    return {"message": "Logout success."}
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
