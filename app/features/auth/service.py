@@ -14,7 +14,7 @@ from sqlalchemy import JSON, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models import User
+from app.models import RefreshToken, User
 from app.services.email import AccountExistsEmail, VerificationEmail
 from app.utils.config import settings
 from app.utils.constants import (
@@ -34,6 +34,7 @@ from app.utils.security import (
     create_refresh_token,
     get_token_from_cookies,
     hash_password,
+    hash_token,
     verify_access_token,
     verify_password,
     verify_refresh_token,
@@ -203,6 +204,15 @@ async def login_service(
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
 
+    hashed_refresh_token = hash_token(refresh_token)
+    db_refresh_token = RefreshToken(
+        user_id=user.id,
+        token_hash=hashed_refresh_token,
+        expires_at=datetime.now(timezone.utc)
+        + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+    )
+    db.add(db_refresh_token)
+
     return TokenResponseSchema(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -270,6 +280,19 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    hashed_token = hash_token(refresh_token)
+    stmt = select(RefreshToken).filter(
+        RefreshToken.token_hash == hashed_token,
+        RefreshToken.is_revoked.is_(False),
+        RefreshToken.expires_at > datetime.now(timezone.utc),
+    )
+    result = await db.execute(stmt)
+    if result.scalars().first() is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
     return create_access_token(data={"sub": user.email})
 
 
@@ -304,7 +327,7 @@ async def create_password_reset_token_service(
 
     token = create_access_token(token_data, expires_delta=timedelta(minutes=30))
 
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    token_hash = hash_token(token)
     user.last_password_reset_token_hash = token_hash
 
     db.add(user)
