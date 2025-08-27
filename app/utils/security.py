@@ -31,10 +31,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         )
 
     to_encode.update({"exp": expire, "token_type": "access"})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
-    return encoded_jwt
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -47,10 +44,8 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
         )
 
     to_encode.update({"exp": expire, "token_type": "refresh"})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
-    return encoded_jwt
+
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def verify_token(token: str) -> Optional[Dict]:
@@ -76,9 +71,7 @@ def verify_access_token(token: str) -> Optional[Dict]:
 
 def verify_refresh_token(token: str) -> Optional[Dict]:
     payload = verify_token(token)
-    if not payload or payload.get("token_type") != "refresh":
-        return None
-    return payload
+    return payload if payload and payload.get("token_type") == "refresh" else None
 
 
 def set_auth_cookies(
