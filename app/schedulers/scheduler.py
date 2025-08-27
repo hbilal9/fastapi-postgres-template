@@ -6,6 +6,3 @@ scheduler = AsyncIOScheduler()
 
 scheduler.add_job(delete_expired_refresh_tokens, "cron", hour=0, minute=0)
 # scheduler.add_job(delete_expired_refresh_tokens, "cron", minute="*")
-
-scheduler.add_job(delete_expired_refresh_tokens, "cron", hour=0, minute=0)
-# scheduler.add_job(delete_expired_refresh_tokens, "cron", minute="*")
