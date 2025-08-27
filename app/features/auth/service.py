@@ -14,7 +14,7 @@ from sqlalchemy import JSON, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.user import User
+from app.models import User
 from app.services.email import AccountExistsEmail, VerificationEmail
 from app.utils.config import settings
 from app.utils.constants import (

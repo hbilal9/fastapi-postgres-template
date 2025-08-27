@@ -16,7 +16,7 @@ def create_superuser():
 
         from sqlalchemy.orm import Session
 
-        from app.models.user import User
+        from app.models_managment.user import User
         from app.utils.database import engine
         from app.utils.security import hash_password
     except ImportError as e:
