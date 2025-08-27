@@ -96,21 +96,24 @@ def set_auth_cookies(
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAMESITE,
-        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-        path="/api/auth/refresh",  # Restrict refresh token to refresh endpoint
-    )
+    cookie_params = {
+        "key": "refresh_token",
+        "value": refresh_token,
+        "httponly": True,
+        "secure": True,
+        "samesite": "lax",
+        "max_age": settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+    }
+
+    response.set_cookie(**cookie_params, path="/api/auth/refresh")
+    response.set_cookie(**cookie_params, path="/api/auth/logout")
 
 
 def delete_auth_cookies(response: Response) -> None:
     """Delete authentication cookies"""
     response.delete_cookie(key=ACCESS_TOKEN_NAME, path="/")
     response.delete_cookie(key="refresh_token", path="/api/auth/refresh")
+    response.delete_cookie(key="refresh_token", path="/api/auth/logout")
 
 
 def get_token_from_cookies(
