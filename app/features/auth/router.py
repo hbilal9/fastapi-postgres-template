@@ -151,7 +151,9 @@ async def register(
         db_user.user_data["message"] = (
             "Verification email sent. Please check your inbox to verify your account."
         )
-    data = UserResponseSchema(**db_user.__dict__)
+    data = {
+        "message": "User registered successfully. Please check your email to verify your account."
+    }
     return success_response(data=data)
 
 

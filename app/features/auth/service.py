@@ -29,6 +29,7 @@ from app.utils.constants import (
     USER_NOT_FOUND_ERROR,
     VERIFICATION_TOKEN_EXPIRED_ERROR,
 )
+from app.utils.logging import logging
 from app.utils.security import (
     create_access_token,
     create_refresh_token,
@@ -42,6 +43,8 @@ from app.utils.security import (
 )
 
 from .schema import LoginRequestSchema, TokenResponseSchema, UserCreateSchema
+
+logger = logging.getLogger(__name__)
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
@@ -193,14 +196,13 @@ async def login_service(
             detail=EMAIL_VERIFICATION_REQUIRED_ERROR,
         )
 
-    if user.twofa_enabled:
-        if not user_input.twofa_token or not check_2fa_token(
-            user, user_input.twofa_token
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=TWOFA_REQUIRED_ERROR,
-            )
+    if user.twofa_enabled and (
+        not user_input.twofa_token or not check_2fa_token(user, user_input.twofa_token)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=TWOFA_REQUIRED_ERROR,
+        )
 
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
@@ -265,9 +267,7 @@ async def get_current_user(token: str, db: AsyncSession) -> User:
 
 
 async def get_current_user_from_cookie(request: Request, db: AsyncSession) -> User:
-    token = get_token_from_cookies(request, ACCESS_TOKEN_NAME)
-
-    if not token:
+    if not (token := get_token_from_cookies(request, ACCESS_TOKEN_NAME)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
@@ -468,8 +468,9 @@ async def verify_email_service(db: AsyncSession, token: str) -> str:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=VERIFICATION_TOKEN_EXPIRED_ERROR,
                 )
-        except ValueError:
-            pass
+        except ValueError as e:
+            logger.error(f"Error parsing verification expiry: {e}")
+
     user.is_user_confirmed = True
     if user.user_data:
         user.user_data["verified"] = True
