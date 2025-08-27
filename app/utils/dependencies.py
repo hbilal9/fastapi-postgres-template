@@ -13,11 +13,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=Fals
 
 async def get_current_user_dependency(
     request: Request,
-    token: Optional[str] = Depends(oauth2_scheme),
-    db: Optional[AsyncSession] = None,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: Annotated[Optional[str], Depends(oauth2_scheme)] = None,
 ) -> User:
-    if db is None:
-        db = await get_db()
     if token:
         return await get_current_user(token, db)
     return await get_current_user_from_cookie(request, db)
