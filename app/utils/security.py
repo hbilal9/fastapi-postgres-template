@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
@@ -127,3 +128,7 @@ def get_token_from_cookies(
             token = auth_header.split(" ")[1]
 
     return token
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
