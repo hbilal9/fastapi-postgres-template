@@ -3,7 +3,6 @@ import os
 from fastapi import (
     APIRouter,
     BackgroundTasks,
-    Depends,
     HTTPException,
     Query,
     Request,
@@ -84,7 +83,7 @@ async def login_with_cookies(
     request: Request,
     response: Response,
     db: DbSession,
-    form_data: LoginRequestSchema = Depends(),
+    form_data: LoginRequestSchema,
 ):
     token_data = await login_service(db, form_data)
     set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
