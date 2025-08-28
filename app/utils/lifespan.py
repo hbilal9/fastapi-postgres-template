@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.schedulers import scheduler
+from app.services.jobs import scheduler
 
 from .logging import logging
 
