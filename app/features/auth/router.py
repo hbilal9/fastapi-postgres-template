@@ -16,7 +16,6 @@ from app.utils.dependencies import CurrentUser, DbSession
 from app.utils.rate_limiter import limiter
 from app.utils.response import StandardResponse, success_response
 from app.utils.security import (
-    delete_auth_cookies,
     get_token_from_cookies,
     set_auth_cookies,
 )
@@ -36,6 +35,7 @@ from .service import (
     create_password_reset_token_service,
     create_user_service,
     login_service,
+    logout_user_session,
     refresh_access_token,
     reset_password_service,
     setup_2fa,
@@ -62,7 +62,12 @@ async def verify_email(
     )
 
 
-@router.post("/token", response_model=StandardResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/token",
+    response_model=StandardResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 @limiter.limit("10/minute")
 async def login(request: Request, db: DbSession, form_data: LoginRequestSchema):
     response = await login_service(db, form_data)
@@ -122,13 +127,13 @@ async def refresh_token(
 
 
 @router.post("/logout", response_model=StandardResponse)
-async def logout(response: Response):
-    delete_auth_cookies(response)
+async def logout(request: Request, response: Response, db: DbSession):
+    await logout_user_session(request, response, db)
     return success_response(data=LogoutResponseSchema())
 
 
 @router.post(
-    "/register", response_model=UserResponseSchema, status_code=status.HTTP_201_CREATED
+    "/register", response_model=StandardResponse, status_code=status.HTTP_201_CREATED
 )
 @limiter.limit("5/minute")
 async def register(
@@ -146,16 +151,23 @@ async def register(
         db_user.user_data["message"] = (
             "Verification email sent. Please check your inbox to verify your account."
         )
+    data = {
+        "message": "User registered successfully. Please check your email to verify your account."
+    }
+    return success_response(data=data)
 
-    return success_response(data=db_user)
 
-
-@router.get("/verification-status", status_code=status.HTTP_200_OK)
+@router.get(
+    "/verification-status",
+    response_model=StandardResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def verification_status(current_user: CurrentUser):
-    return {
+    data = {
         "is_verified": current_user.is_user_confirmed,
         "verification_required": settings.USER_VERIFICATION_CHECK,
     }
+    return success_response(data=data)
 
 
 @router.get("/me", response_model=StandardResponse, status_code=status.HTTP_200_OK)
@@ -163,7 +175,11 @@ async def get_current_user(current_user: CurrentUser):
     return success_response(data=UserResponseSchema(**current_user.__dict__))
 
 
-@router.get("/test/reset-password-email", status_code=status.HTTP_200_OK)
+@router.get(
+    "/test/reset-password-email",
+    response_model=StandardResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def test_password_reset_email(background_tasks: BackgroundTasks):
     email = "mtalha@texagon.io"
     first_name = "Talha"
@@ -185,7 +201,11 @@ async def test_password_reset_email(background_tasks: BackgroundTasks):
     )
 
 
-@router.post("/reset-password/request", status_code=status.HTTP_200_OK)
+@router.post(
+    "/reset-password/request",
+    response_model=StandardResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def create_password_reset_token(
     request: Request, db: DbSession, email: str, background_tasks: BackgroundTasks
 ):
@@ -210,7 +230,7 @@ async def create_password_reset_token(
     )
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", response_model=StandardResponse)
 async def reset_password(
     request: Request, db: DbSession, data: ResetPasswordVerifySchema
 ):
@@ -233,7 +253,9 @@ async def reset_password(
     )
 
 
-@router.post("/2fa/setup", status_code=status.HTTP_200_OK)
+@router.post(
+    "/2fa/setup", response_model=StandardResponse, status_code=status.HTTP_200_OK
+)
 async def setup_twofa(
     request: Request,
     db: DbSession,
@@ -251,7 +273,9 @@ async def setup_twofa(
     )
 
 
-@router.post("/2fa/verify", status_code=status.HTTP_200_OK)
+@router.post(
+    "/2fa/verify", response_model=StandardResponse, status_code=status.HTTP_200_OK
+)
 async def verify_twofa(
     request: Request, db: DbSession, current_user: CurrentUser, token: str
 ):

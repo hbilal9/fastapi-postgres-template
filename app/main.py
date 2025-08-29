@@ -18,6 +18,7 @@ from app.utils.exception_handler import (
     pydantic_validation_exception_handler,
     validation_exception_handler,
 )
+from app.utils.lifespan import lifespan_handler
 from app.utils.response import success_response
 
 from .utils.logging import LogLevels, configure_logging
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
         description="FASTAPI POSTGRES TEMPLATE",
         version="1.0.0",
         debug=settings.DEBUG,
+        lifespan=lifespan_handler,
     )
 
     configure_logging(log_level=LogLevels.info)
