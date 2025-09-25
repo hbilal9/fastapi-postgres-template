@@ -419,14 +419,32 @@ async def add_item(item):
 
 ```
 .
-├── app/                  # Main application code
-│   ├── api/              # API endpoints (routers)
-│   ├── commands/         # Custom management commands (e.g., create_admin.py)
-│   ├── models/           # SQLAlchemy database models
-│   ├── schemas/          # Pydantic schemas for data validation and serialization
-│   ├── services/         # Business logic services
-│   ├── utils/            # Utility functions (e.g., database connection, security)
-│   └── main.py           # FastAPI application entry point
+app/
+├── features/
+│   └── auth/
+│       ├── router.py          # REST API endpoints
+│       ├── service.py         # Business logic
+│       ├── schema.py          # Pydantic models
+│       └── graphql/
+│           ├── types/ # GraphQL types
+│           ├── queries/ # GraphQL queries
+│           └── mutations/ # GraphQL mutations
+├── models/
+│   ├── user.py               # SQLAlchemy models
+│   └── deal.py               # Deal model
+├── utils/
+│   ├── dependencies.py      # Common dependencies
+│   ├── security.py          # Password & JWT utilities
+│   ├── permissions.py       # Role-based access control
+│   ├── database.py              # Database configuration
+│   ├── config.py                # Application settings
+│   ├── api.py               # Regiseter api routes
+│   └── exception_handler.py # Custom error handlers
+├── graphql/
+│   ├── schema.py            # Main GraphQL schema
+│   └── context.py           # GraphQL context
+├── alembic/                 # Database migrations
+├── main.py                  # FastAPI application
 ├── alembic/              # Alembic database migration scripts
 ├── tests/                # Unit and integration tests
 ├── .env                  # Local environment variables (create this file)
@@ -435,7 +453,6 @@ async def add_item(item):
 ├── docker-compose.yml    # Docker Compose configuration
 ├── Dockerfile            # Dockerfile for the FastAPI application
 ├── entrypoint.sh         # Entrypoint script for the FastAPI container
-├── init.sql              # SQL script for initial database setup (e.g., creating roles)
 ├── pyproject.toml        # Project metadata and dependencies (using Poetry/uv)
 ├── README.md             # This file
 └── uv.lock               # Lock file for dependencies managed by uv
