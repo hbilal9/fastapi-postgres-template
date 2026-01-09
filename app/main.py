@@ -32,6 +32,9 @@ sentry_sdk.init(
 def create_app() -> FastAPI:
     app = FastAPI(
         title="FASTAPI",
+        docs_url="/api/docs" if settings.DEBUG else None,
+        redoc_url="/api/redoc" if settings.DEBUG else None,
+        openapi_url="/api/openapi.json" if settings.DEBUG else None,
         description="FASTAPI POSTGRES TEMPLATE",
         version="1.0.0",
         debug=settings.DEBUG,
@@ -67,13 +70,9 @@ def create_app() -> FastAPI:
     register_routes(app)
 
     # Mount static frontend files if the directory exists
-    frontend_dir = Path(
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
-    )
+    frontend_dir = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend"))
     if frontend_dir.exists():
-        app.mount(
-            "/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend"
-        )
+        app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
 
     return app
 
