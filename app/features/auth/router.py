@@ -24,6 +24,8 @@ from .schema import (
     CookieTokenResponseSchema,
     LoginRequestSchema,
     LogoutResponseSchema,
+    MFARequiredResponseSchema,
+    MFAVerifyRequestSchema,
     RefreshTokenRequestSchema,
     RefreshTokenResponseSchema,
     ResetPasswordVerifySchema,
@@ -38,18 +40,17 @@ from .service import (
     logout_user_session,
     refresh_access_token,
     reset_password_service,
-    setup_2fa,
-    verify_2fa,
+    setup_mfa_service,
     verify_email_service,
+    verify_mfa_login_service,
+    verify_mfa_service,
     verify_password_reset_service,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.get(
-    "/verify-email", response_model=StandardResponse, status_code=status.HTTP_200_OK
-)
+@router.get("/verify-email", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def verify_email(
     request: Request,
@@ -71,6 +72,8 @@ async def verify_email(
 @limiter.limit("10/minute")
 async def login(request: Request, db: DbSession, form_data: LoginRequestSchema):
     response = await login_service(db, form_data)
+    if isinstance(response, MFARequiredResponseSchema):
+        return success_response(data=response)
     return success_response(
         data=TokenResponseSchema(
             access_token=response.access_token,
@@ -80,9 +83,7 @@ async def login(request: Request, db: DbSession, form_data: LoginRequestSchema):
     )
 
 
-@router.post(
-    "/login", response_model=CookieTokenResponseSchema, status_code=status.HTTP_200_OK
-)
+@router.post("/login", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def login_with_cookies(
     request: Request,
@@ -91,13 +92,13 @@ async def login_with_cookies(
     form_data: LoginRequestSchema,
 ):
     token_data = await login_service(db, form_data)
+    if isinstance(token_data, MFARequiredResponseSchema):
+        return success_response(data=token_data)
     set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
-    return CookieTokenResponseSchema(message="Login successful")
+    return success_response(data=CookieTokenResponseSchema(message="Login successful"))
 
 
-@router.post(
-    "/refresh", response_model=StandardResponse, status_code=status.HTTP_200_OK
-)
+@router.post("/refresh", response_model=StandardResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def refresh_token(
     request: Request,
@@ -121,9 +122,7 @@ async def refresh_token(
     if get_token_from_cookies(request, "refresh_token"):
         set_auth_cookies(response, new_access_token, refresh_token)
 
-    return success_response(
-        data=RefreshTokenResponseSchema(access_token=new_access_token)
-    )
+    return success_response(data=RefreshTokenResponseSchema(access_token=new_access_token))
 
 
 @router.post("/logout", response_model=StandardResponse)
@@ -132,9 +131,7 @@ async def logout(request: Request, response: Response, db: DbSession):
     return success_response(data=LogoutResponseSchema())
 
 
-@router.post(
-    "/register", response_model=StandardResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/register", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def register(
     request: Request,
@@ -142,18 +139,12 @@ async def register(
     db: DbSession,
     background_tasks: BackgroundTasks,
 ):
-    db_user = await create_user_service(
-        db=db, user_input=user, background_tasks=background_tasks
-    )
+    db_user = await create_user_service(db=db, user_input=user, background_tasks=background_tasks)
     if settings.USER_VERIFICATION_CHECK:
         if not db_user.user_data:
             db_user.user_data = {}
-        db_user.user_data["message"] = (
-            "Verification email sent. Please check your inbox to verify your account."
-        )
-    data = {
-        "message": "User registered successfully. Please check your email to verify your account."
-    }
+        db_user.user_data["message"] = "Verification email sent. Please check your inbox to verify your account."
+    data = {"message": "User registered successfully. Please check your email to verify your account."}
     return success_response(data=data)
 
 
@@ -206,9 +197,7 @@ async def test_password_reset_email(background_tasks: BackgroundTasks):
     response_model=StandardResponse,
     status_code=status.HTTP_200_OK,
 )
-async def create_password_reset_token(
-    request: Request, db: DbSession, email: str, background_tasks: BackgroundTasks
-):
+async def create_password_reset_token(request: Request, db: DbSession, email: str, background_tasks: BackgroundTasks):
     user, token = await create_password_reset_token_service(db, email)
 
     if token:
@@ -224,16 +213,12 @@ async def create_password_reset_token(
         )
 
     return success_response(
-        data={
-            "message": "If an account with that email exists, a password reset link has been sent to your email."
-        }
+        data={"message": "If an account with that email exists, a password reset link has been sent to your email."}
     )
 
 
 @router.post("/reset-password", response_model=StandardResponse)
-async def reset_password(
-    request: Request, db: DbSession, data: ResetPasswordVerifySchema
-):
+async def reset_password(request: Request, db: DbSession, data: ResetPasswordVerifySchema):
     user = await verify_password_reset_service(db, data.token)
     if not user:
         raise HTTPException(
@@ -246,49 +231,44 @@ async def reset_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to reset password",
         )
-    return success_response(
-        data={
-            "message": "Password reset successful. You can now log in with your new password."
-        }
-    )
+    return success_response(data={"message": "Password reset successful. You can now log in with your new password."})
 
 
-@router.post(
-    "/2fa/setup", response_model=StandardResponse, status_code=status.HTTP_200_OK
-)
-async def setup_twofa(
+@router.post("/mfa/setup", response_model=StandardResponse, status_code=status.HTTP_200_OK)
+async def setup_mfa_route(
     request: Request,
     db: DbSession,
     current_user: CurrentUser,
 ):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
 
-    secret, qr_code = await setup_2fa(db, current_user)
+    secret, qr_code = await setup_mfa_service(db, current_user)
 
-    return success_response(
-        data={"message": "2FA setup successful", "secret": secret, "qr_code": qr_code}
-    )
+    return success_response(data={"message": "mfa setup successful", "secret": secret, "qr_code": qr_code})
 
 
-@router.post(
-    "/2fa/verify", response_model=StandardResponse, status_code=status.HTTP_200_OK
-)
-async def verify_twofa(
-    request: Request, db: DbSession, current_user: CurrentUser, token: str
-):
+@router.post("/mfa/verify", response_model=StandardResponse, status_code=status.HTTP_200_OK)
+async def verify_mfa_route(request: Request, db: DbSession, current_user: CurrentUser, token: str):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
 
-    is_valid = await verify_2fa(db, current_user, token)
+    is_valid = await verify_mfa_service(db, current_user, token)
 
     if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA token"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid mfa token")
 
-    return success_response(data={"message": "2FA verification successful"})
+    return success_response(data={"message": "mfa verification successful"})
+
+
+@router.post("/mfa/login/verify", response_model=StandardResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def verify_mfa_login_endpoint(
+    request: Request,
+    response: Response,
+    db: DbSession,
+    data: MFAVerifyRequestSchema,
+):
+    token_data = await verify_mfa_login_service(db, data.temp_token, data.mfa_code)
+    set_auth_cookies(response, token_data.access_token, token_data.refresh_token)
+    return success_response(data=CookieTokenResponseSchema(message="Login successful"))
