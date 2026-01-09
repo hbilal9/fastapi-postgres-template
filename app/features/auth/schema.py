@@ -15,7 +15,6 @@ class UserBaseSchema(BaseModel):
 class LoginRequestSchema(BaseModel):
     email: EmailStr
     password: str
-    twofa_token: Optional[str] = None
 
 
 class UserCreateSchema(UserBaseSchema):
@@ -62,9 +61,7 @@ class LogoutResponseSchema(BaseModel):
 
 class ResetPasswordVerifySchema(BaseModel):
     token: str
-    new_password: str = Field(
-        ..., min_length=8, description="The new password for the user"
-    )
+    new_password: str = Field(..., min_length=8, description="The new password for the user")
 
 
 class TwoFASetupResponseSchema(BaseModel):
@@ -74,3 +71,13 @@ class TwoFASetupResponseSchema(BaseModel):
 
 class TwoFAVerifyRequestSchema(BaseModel):
     token: str
+
+
+class MFARequiredResponseSchema(BaseModel):
+    requires_mfa: bool = True
+    temp_token: str
+
+
+class MFAVerifyRequestSchema(BaseModel):
+    temp_token: str
+    mfa_code: str
